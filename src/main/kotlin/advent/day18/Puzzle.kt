@@ -1,112 +1,149 @@
 package test.advent.day18
 
-import org.jgrapht.Graphs
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath
-import org.jgrapht.graph.DefaultUndirectedGraph
+import org.jgrapht.graph.DefaultDirectedGraph
 import java.io.File
 
 
 val day = 18;
 val file = File("src/main/resources/day${day}/input")
 
+
 fun main() {
-    val input = file.readLines().map { it.toList() }
+    val rawInput = file.readLines().map { it.toList() }
+    val input = replaceCenter(rawInput) // add false to keep original input (for part 1)
     input.forEach(::println)
-    // get all keys plus positions
-    val points = getPoints(input)
-    val entrance = points.find { it.entrance }!!
-    val keys = points.filter { it.key in 'a'..'z' }
-    val doors = points.filter { it.door in 'A'..'Z' }.map { it.door!! }
 
     // build graph of connected tunnels?
+    val points = getPoints(input)
     val edges = getEdges(points)
-//    edges.forEach(::println)
-    val graph = DefaultUndirectedGraph<Point, Edge>(Edge::class.java)
-    points.forEach { graph.addVertex(it) }
-    edges.forEach { graph.addEdge(it.source, it.target, it) }
+    val bigGraph = DefaultDirectedGraph<Point, DetailedEdge>(DetailedEdge::class.java)
+    points.forEach { bigGraph.addVertex(it) }
+    edges.forEach { bigGraph.addEdge(it.source, it.target, it) }
+
+    val graph = createSimplifiedGraph(bigGraph)
     println(graph)
-    // try out all possibilities key orders and find shortest path for each, TSP?
-    val routes = findValidRoutes(entrance, keys, doors, graph).map { it.reversed() }
-    println(routes)
 
-    val results = routes
-        .map { findShortestPath(listOf(entrance) + it, graph) }
-        .filter { it.second.isNotEmpty() }
-    results.forEach { println("${it.first.map { it.key }}, length: ${it.second.size}, steps: ${it.second}") }
+    val vault = Vault(graph)
+
+    // part 1
+//    val shortest = vault.findShortestRoute()
+//    println(shortest)
 }
-var routesFound = 0
 
-fun findValidRoutes(
-    currentPlace: Point,
-    keysStillToGet: List<Point>,
-    closedDoors: List<Char>,
-    originalGraph: DefaultUndirectedGraph<Point, Edge>
-): Set<List<Point>> {
-//    println("current $currentPlace, keys to get: $keysStillToGet, closedDoors: $closedDoors")
-    val freshGraph = DefaultUndirectedGraph<Point, Edge>(Edge::class.java)
-    Graphs.addGraph(freshGraph, originalGraph)
-    val edgeByDoor =
-        freshGraph.edgeSet().filter { it.hasDoor() }.filter { it.getDoor() in closedDoors }.groupBy { it.getDoor() }
-    freshGraph.removeAllEdges(edgeByDoor.values.flatten())
-
-    if (keysStillToGet.isEmpty()) {
-        if (routesFound++ % 100 == 0) println(routesFound)
-        return setOf(emptyList())
-    }
-
-    val result: MutableSet<List<Point>> = mutableSetOf()
-    for (key in keysStillToGet) {
-        val dijkstraShortestPath = DijkstraShortestPath(freshGraph)
-        val shortestPath = dijkstraShortestPath
-            .getPath(currentPlace, key)
-
-        if (shortestPath != null) {
-            findValidRoutes(key,
-                keysStillToGet - key,
-                closedDoors - (key.key!!.toUpperCase()),
-                originalGraph)
-                .forEach { item -> result.add(item + key)}
+fun replaceCenter(rawInput: List<List<Char>>, replace: Boolean = true): List<List<Char>> {
+    val size = rawInput.size
+    val half = (size - 1) / 2
+    val change = mapOf(
+        Pair(half + -1, half + -1) to '@',
+        Pair(half + 0, half + -1) to '#',
+        Pair(half + 1, half + -1) to '@',
+        Pair(half + -1, half + 0) to '#',
+        Pair(half + 0, half + 0) to '#',
+        Pair(half + 1, half + 0) to '#',
+        Pair(half + -1, half + 1) to '@',
+        Pair(half + 0, half + 1) to '#',
+        Pair(half + 1, half + 1) to '@',
+    )
+    val newGrid = MutableList(size) { MutableList(size) { ' ' } }
+    for (y in 0 until size) {
+        for (x in 0 until size) {
+            newGrid[y][x] = rawInput[y][x]
+            if (replace) newGrid[y][x] = change.getOrDefault(Pair(y, x), rawInput[y][x])
         }
     }
-    return result
+    return newGrid
 }
 
-fun <T> permutations(list: List<T>): Set<List<T>> {
-    println("current $list")
+class Vault(
+    val graph: DefaultDirectedGraph<Point, Edge>,
+    val allKeys: Set<Char> = graph.vertexSet().filter { it.key in 'a'..'z' }.map { it.key!! }.toSet(),
+    var shortestRoute: Pair<Int, List<Edge>>? = null
+) {
 
-    if (list.isEmpty()) return setOf(emptyList())
+    fun findShortestRoute(): Pair<Int, List<Edge>> {
+        val botPosition = graph.vertexSet().find { it.bot }!!
+        findValidRoutes(botPosition, mutableListOf(), Pair(0, listOf()), mutableMapOf())
+        return shortestRoute ?: throw IllegalStateException("couldn't find a shortest route")
+    }
 
-    val result: MutableSet<List<T>> = mutableSetOf()
-    for (i in list.indices) {
-        permutations(list - list[i]).forEach { item ->
-            result.add(item + list[i])
+    fun findValidRoutes(
+        currentPlace: Point,
+        obtainedKeys: MutableList<Char>,
+        currentRoute: Pair<Int, List<Edge>>,
+        cache: MutableMap<Point, MutableMap<Set<Char>, Int>>
+    ) {
+        if (obtainedKeys.toSet().size == allKeys.size) {
+            if (shortestRoute?.first == null || currentRoute.first < shortestRoute?.first!!) {
+                println("found new shortest route ${currentRoute.first}, ${currentRoute.second.map { it.target.key }}")
+                shortestRoute = currentRoute
+            }
+        }
+
+        for (edge in graph.outgoingEdgesOf(currentPlace)) {
+            val keys = obtainedKeys.toMutableList()
+            if (edge.hasDoor() && edge.isClosed(keys)) continue
+            val newPlace = edge.target
+            newPlace.key?.let { if (it !in keys) keys.add(it) }
+            val newRoute = Pair(currentRoute.first + edge.moves, currentRoute.second + edge)
+            if (newRoute.first > (shortestRoute?.first ?: Int.MAX_VALUE)) continue
+
+            if (cache.containsKey(newPlace)) {
+                if (cache[newPlace]!!.keys.contains(keys.toSet())) {
+                    if (newRoute.first >= cache[newPlace]!![keys.toSet()]!!) {
+                        continue
+                    } else {
+                        cache[newPlace]!!.put(keys.toSet(), newRoute.first)
+                    }
+                } else {
+                    cache[newPlace]!!.put(keys.toSet(), newRoute.first)
+                }
+            } else {
+                cache.put(newPlace, mutableMapOf(keys.toSet() to newRoute.first))
+            }
+
+            findValidRoutes(
+                newPlace,
+                keys.toMutableList(),
+                newRoute,
+                cache
+            )
         }
     }
-    return result
 }
 
-fun findShortestPath(
-    keys: List<Point>,
-    originalGraph: DefaultUndirectedGraph<Point, Edge>
-): Pair<List<Point>, List<Point>> {
-//    keys.forEach(::println)
-    val freshGraph = DefaultUndirectedGraph<Point, Edge>(Edge::class.java)
-    Graphs.addGraph(freshGraph, originalGraph)
-//    freshGraph.edgeSet().forEach(::println)
-    val edgeByDoor = freshGraph.edgeSet().filter { it.hasDoor() }.groupBy { it.getDoor() }
-//    edgeByDoor.forEach(::println)
-    freshGraph.removeAllEdges(edgeByDoor.values.flatten())
-    val dijkstraShortestPath = DijkstraShortestPath(freshGraph)
-    val totalPath = mutableListOf<Point>()
-    for (k in 0 until (keys.size - 1)) {
-        val shortestPath = dijkstraShortestPath
-            .getPath(keys[k], keys[k + 1])
-        val shortestPathPoints = shortestPath?.vertexList ?: return Pair(keys, emptyList())
-//        println("shortest path: from ${keys[k]} to ${keys[k+1]}: \n$shortestPathPoints")
-        edgeByDoor[keys[k + 1].key?.toUpperCase()]?.forEach { freshGraph.addEdge(it.source, it.target, it) }
-        totalPath += shortestPathPoints.subList(1, shortestPathPoints.size)
+fun createSimplifiedGraph(bigGraph: DefaultDirectedGraph<Point, DetailedEdge>): DefaultDirectedGraph<Point, Edge> {
+    val graph = DefaultDirectedGraph<Point, Edge>(Edge::class.java)
+    val entrances = bigGraph.vertexSet().filter { it.bot }
+    bigGraph.vertexSet().filter { it.key != null }.forEach { graph.addVertex(it) }
+    val dijkstraShortestPath = DijkstraShortestPath(bigGraph)
+    for (source in graph.vertexSet()) {
+        for (target in graph.vertexSet()) {
+            if (source == target) continue
+            val shortestPath = dijkstraShortestPath
+                .getPath(source, target)?.vertexList
+            if (shortestPath?.count { it.key != null } == 2) {
+                val doors = shortestPath.filter { it.door != null }.mapNotNull { it.door }
+                graph.addEdge(source, target, Edge(source, target, doors, shortestPath.size - 1))
+                graph.addEdge(target, source, Edge(target, source, doors, shortestPath.size - 1))
+//                println("source: $source, target $target, path: $shortestPath")
+            }
+        }
     }
-    return Pair(keys, totalPath)
+    entrances.forEach(graph::addVertex)
+    for (entrance in entrances) {
+        for (target in graph.vertexSet()) {
+            if (entrance == target) continue
+            val shortestPath = dijkstraShortestPath
+                .getPath(entrance, target)?.vertexList
+            if (shortestPath?.count { it.key != null } == 1) {
+                val doors = shortestPath.filter { it.door != null }.mapNotNull { it.door }
+                graph.addEdge(entrance, target, Edge(entrance, target, doors, shortestPath.size - 1))
+//                println("source: $source, target $target, path: $shortestPath")
+            }
+        }
+    }
+    return graph
 }
 
 private fun getPoints(input: List<List<Char>>): MutableList<Point> {
@@ -117,7 +154,7 @@ private fun getPoints(input: List<List<Char>>): MutableList<Point> {
             val p = when (c) {
                 '#' -> null
                 '.' -> Point(x, y)
-                '@' -> Point(x, y, entrance = true)
+                '@' -> Point(x, y, bot = true)
                 in 'a'..'z' -> Point(x, y, key = c)
                 in 'A'..'Z' -> Point(x, y, door = c)
                 else -> throw IllegalArgumentException("wow")
@@ -128,22 +165,22 @@ private fun getPoints(input: List<List<Char>>): MutableList<Point> {
     return points
 }
 
-private fun getEdges(points: List<Point>): List<Edge> {
-    val edges = mutableListOf<Edge>()
+private fun getEdges(points: List<Point>): List<DetailedEdge> {
+    val edges = mutableListOf<DetailedEdge>()
     for (p in points) {
-        points.filter { it.neighbours(p) }.forEach { edges += Edge(p, it) }
+        points.filter { it.neighbours(p) }.forEach { edges += DetailedEdge(p, it) }
     }
     return edges
 }
 
-data class Edge(val source: Point, val target: Point) {
-    fun hasDoor(): Boolean = (source.door != null || target.door != null)
-
-    fun getDoor(): Char = source.door ?: (target.door ?: throw IllegalStateException("expected door"))
+data class Edge(val source: Point, val target: Point, var doors: List<Char> = listOf(), val moves: Int) {
+    fun hasDoor(): Boolean = doors.isNotEmpty()
+    fun isClosed(obtainedKeys: List<Char>): Boolean = doors.any { it.toLowerCase() !in obtainedKeys }
 }
 
-data class Point(val x: Int, val y: Int, val key: Char? = null, val door: Char? = null, val entrance: Boolean = false) {
+data class DetailedEdge(val source: Point, val target: Point)
 
+data class Point(val x: Int, val y: Int, val key: Char? = null, val door: Char? = null, val bot: Boolean = false) {
     fun neighbours(p: Point): Boolean {
         return (x == p.x && (y == p.y - 1 || y == p.y + 1)) ||
                 (y == p.y && (x == p.x - 1 || x == p.x + 1))
@@ -166,8 +203,4 @@ data class Point(val x: Int, val y: Int, val key: Char? = null, val door: Char? 
         result = 31 * result + y
         return result
     }
-
-
 }
-
-class Vault(val map: List<List<Char>>)

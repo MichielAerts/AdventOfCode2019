@@ -1,10 +1,5 @@
 package test
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-
 sealed class Bla {}
 class Bla1 : Bla()
 class Bla2 : Bla()
@@ -19,7 +14,12 @@ class Duck {
     }
 }
 fun main() {
-    Duck.herdDucks(5)
+
+    val l = mutableMapOf(1 to listOf(setOf(1, 2)))
+    val newSet = setOf(2, 3)
+    l.merge(2, listOf(newSet)) { old, new -> old + new }
+    println(l)
+//    Duck.herdDucks(5)
 //    val first = { it: Double -> it * 2 }
 //    val second: DoubleConv = { it * 3 }
 //    val b: Bla = Bla2()
