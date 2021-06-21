@@ -4,10 +4,10 @@ import org.jgrapht.alg.shortestpath.DijkstraShortestPath
 import org.jgrapht.graph.DefaultDirectedGraph
 import java.io.File
 
+typealias Route = Triple<List<Char>, Int, MutableMap<Int, Pair<Point, List<Edge>>>>
 
 val day = 18;
 val file = File("src/main/resources/day${day}/input")
-
 
 fun main() {
     val rawInput = file.readLines().map { it.toList() }
@@ -29,25 +29,31 @@ fun main() {
     // part 1
 //    val shortest = vault.findShortestRoute()
 //    println(shortest)
+
+    // part 2
+    val shortest = vault.findShortestRouteMultiBot()
+
 }
 
 fun replaceCenter(rawInput: List<List<Char>>, replace: Boolean = true): List<List<Char>> {
-    val size = rawInput.size
-    val half = (size - 1) / 2
+    val vSize = rawInput.size
+    val hSize = rawInput[0].size
+    val vHalf = (vSize - 1) / 2
+    val hHalf = (hSize - 1) / 2
     val change = mapOf(
-        Pair(half + -1, half + -1) to '@',
-        Pair(half + 0, half + -1) to '#',
-        Pair(half + 1, half + -1) to '@',
-        Pair(half + -1, half + 0) to '#',
-        Pair(half + 0, half + 0) to '#',
-        Pair(half + 1, half + 0) to '#',
-        Pair(half + -1, half + 1) to '@',
-        Pair(half + 0, half + 1) to '#',
-        Pair(half + 1, half + 1) to '@',
+        Pair(vHalf + -1, hHalf + -1) to '@',
+        Pair(vHalf + 0, hHalf + -1) to '#',
+        Pair(vHalf + 1, hHalf + -1) to '@',
+        Pair(vHalf + -1, hHalf + 0) to '#',
+        Pair(vHalf + 0, hHalf + 0) to '#',
+        Pair(vHalf + 1, hHalf + 0) to '#',
+        Pair(vHalf + -1, hHalf + 1) to '@',
+        Pair(vHalf + 0, hHalf + 1) to '#',
+        Pair(vHalf + 1, hHalf + 1) to '@',
     )
-    val newGrid = MutableList(size) { MutableList(size) { ' ' } }
-    for (y in 0 until size) {
-        for (x in 0 until size) {
+    val newGrid = MutableList(vSize) { MutableList(hSize) { ' ' } }
+    for (y in 0 until vSize) {
+        for (x in 0 until hSize) {
             newGrid[y][x] = rawInput[y][x]
             if (replace) newGrid[y][x] = change.getOrDefault(Pair(y, x), rawInput[y][x])
         }
@@ -58,57 +64,124 @@ fun replaceCenter(rawInput: List<List<Char>>, replace: Boolean = true): List<Lis
 class Vault(
     val graph: DefaultDirectedGraph<Point, Edge>,
     val allKeys: Set<Char> = graph.vertexSet().filter { it.key in 'a'..'z' }.map { it.key!! }.toSet(),
-    var shortestRoute: Pair<Int, List<Edge>>? = null
+    val allRoutes: MutableList<Route> = mutableListOf(),
+    // per route: collected Keys, moves, map of robots [0 - 3] and their positions and travelled route
+    var shortestRoute: Pair<Int, Map<Int, Pair<Point, List<Edge>>>>? = null
 ) {
 
-    fun findShortestRoute(): Pair<Int, List<Edge>> {
-        val botPosition = graph.vertexSet().find { it.bot }!!
-        findValidRoutes(botPosition, mutableListOf(), Pair(0, listOf()), mutableMapOf())
+//    fun findShortestRoute(): Pair<Int, List<Edge>> {
+//        val botPosition = graph.vertexSet().find { it.bot }!!
+//        findValidRoutes(botPosition, mutableListOf(), Pair(0, listOf()), mutableMapOf())
+//        return shortestRoute ?: throw IllegalStateException("couldn't find a shortest route")
+//    }
+
+    fun findShortestRouteMultiBot(): Pair<Int, Map<Int, Pair<Point, List<Edge>>>> {
+        val botPositions = graph.vertexSet()
+            .filter { it.bot }
+            .mapIndexed { i, botPlace -> Pair(i, Pair(botPlace!!, listOf<Edge>())) }
+            .toMap().toMutableMap()
+        allRoutes.add(Triple(listOf(), 0, botPositions))
+        findValidRoutes(mutableMapOf())
         return shortestRoute ?: throw IllegalStateException("couldn't find a shortest route")
     }
 
     fun findValidRoutes(
-        currentPlace: Point,
-        obtainedKeys: MutableList<Char>,
-        currentRoute: Pair<Int, List<Edge>>,
+//        currentRoute: Triple<List<Char>, Int, MutableMap<Int, List<Edge>>>,
         cache: MutableMap<Point, MutableMap<Set<Char>, Int>>
     ) {
-        if (obtainedKeys.toSet().size == allKeys.size) {
-            if (shortestRoute?.first == null || currentRoute.first < shortestRoute?.first!!) {
-                println("found new shortest route ${currentRoute.first}, ${currentRoute.second.map { it.target.key }}")
-                shortestRoute = currentRoute
-            }
-        }
-
-        for (edge in graph.outgoingEdgesOf(currentPlace)) {
-            val keys = obtainedKeys.toMutableList()
-            if (edge.hasDoor() && edge.isClosed(keys)) continue
-            val newPlace = edge.target
-            newPlace.key?.let { if (it !in keys) keys.add(it) }
-            val newRoute = Pair(currentRoute.first + edge.moves, currentRoute.second + edge)
-            if (newRoute.first > (shortestRoute?.first ?: Int.MAX_VALUE)) continue
-
-            if (cache.containsKey(newPlace)) {
-                if (cache[newPlace]!!.keys.contains(keys.toSet())) {
-                    if (newRoute.first >= cache[newPlace]!![keys.toSet()]!!) {
-                        continue
-                    } else {
-                        cache[newPlace]!!.put(keys.toSet(), newRoute.first)
+        var newRoutes: MutableList<Route>? = null
+        while (newRoutes == null || newRoutes.size > 0) {
+            newRoutes = mutableListOf()
+            for (route in allRoutes) {
+                val (obtainedKeys, moves, routes) = route
+                if (obtainedKeys.toSet().size == allKeys.size) {
+                    if (shortestRoute?.first == null || moves < shortestRoute?.first!!) {
+                        println("found new shortest route ${moves}, ${routes}")
+                        shortestRoute = Pair(moves, routes)
                     }
                 } else {
-                    cache[newPlace]!!.put(keys.toSet(), newRoute.first)
-                }
-            } else {
-                cache.put(newPlace, mutableMapOf(keys.toSet() to newRoute.first))
-            }
+                    for ((bot, placeAndRoute) in routes) {
+                        val (currentPlace, currentRoute) = placeAndRoute
+                        for (edge in graph.outgoingEdgesOf(currentPlace)) {
+                            if (edge.hasDoor() && edge.isClosed(obtainedKeys)) continue
+                            val newPlace = edge.target
+                            val newKeys = obtainedKeys.toMutableList()
+                            val newPlaceAndRoutes = routes.toMutableMap()
+                            newPlace.key?.let { if (it !in obtainedKeys) newKeys.add(it) }
+                            // Triple<List<Char>, Int, MutableMap<Int, Pair<Point, List<Edge>>>>
 
-            findValidRoutes(
-                newPlace,
-                keys.toMutableList(),
-                newRoute,
-                cache
-            )
+                            newPlaceAndRoutes[bot] = Pair(newPlace, currentRoute + edge)
+                            val newRoute = Triple(newKeys.toList(), moves + edge.moves, newPlaceAndRoutes)
+                            if (newRoute.second > (shortestRoute?.first ?: Int.MAX_VALUE)) continue
+
+                            if (cache.containsKey(newPlace)) {
+                                if (cache[newPlace]!!.keys.contains(newKeys.toSet())) {
+                                    if (newRoute.second >= cache[newPlace]!![newKeys.toSet()]!!) {
+                                        continue
+                                    } else {
+                                        cache[newPlace]!!.put(newKeys.toSet(), newRoute.second)
+                                    }
+                                } else {
+                                    cache[newPlace]!!.put(newKeys.toSet(), newRoute.second)
+                                }
+                            } else {
+                                cache.put(newPlace, mutableMapOf(newKeys.toSet() to newRoute.second))
+                            }
+//                            println(newRoute)
+                            newRoutes.add(newRoute)
+//                        findValidRoutes(
+//                            cache
+//                        )
+                        }
+                    }
+                }
+            }
+            allRoutes.addAll(newRoutes)
+//            allRoutes.forEach(::println)
         }
+
+//    fun findValidRoutes(
+//        currentPlace: Point,
+//        obtainedKeys: MutableList<Char>,
+//        currentRoute: Pair<Int, List<Edge>>,
+//        cache: MutableMap<Point, MutableMap<Set<Char>, Int>>
+//    ) {
+//        if (obtainedKeys.toSet().size == allKeys.size) {
+//            if (shortestRoute?.first == null || currentRoute.first < shortestRoute?.first!!) {
+//                println("found new shortest route ${currentRoute.first}, ${currentRoute.second.map { it.target.key }}")
+//                shortestRoute = currentRoute
+//            }
+//        }
+//
+//        for (edge in graph.outgoingEdgesOf(currentPlace)) {
+//            val keys = obtainedKeys.toMutableList()
+//            if (edge.hasDoor() && edge.isClosed(keys)) continue
+//            val newPlace = edge.target
+//            newPlace.key?.let { if (it !in keys) keys.add(it) }
+//            val newRoute = Pair(currentRoute.first + edge.moves, currentRoute.second + edge)
+//            if (newRoute.first > (shortestRoute?.first ?: Int.MAX_VALUE)) continue
+//
+//            if (cache.containsKey(newPlace)) {
+//                if (cache[newPlace]!!.keys.contains(keys.toSet())) {
+//                    if (newRoute.first >= cache[newPlace]!![keys.toSet()]!!) {
+//                        continue
+//                    } else {
+//                        cache[newPlace]!!.put(keys.toSet(), newRoute.first)
+//                    }
+//                } else {
+//                    cache[newPlace]!!.put(keys.toSet(), newRoute.first)
+//                }
+//            } else {
+//                cache.put(newPlace, mutableMapOf(keys.toSet() to newRoute.first))
+//            }
+//
+//            findValidRoutes(
+//                newPlace,
+//                keys.toMutableList(),
+//                newRoute,
+//                cache
+//            )
+//        }
     }
 }
 
