@@ -13,6 +13,7 @@ import java.time.Period
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 
@@ -42,12 +43,49 @@ class EventBuilder(private val title: String) {
 
 fun event(title: String, init: EventBuilder.() -> Unit): Event = EventBuilder(title).apply(init).build()
 
-fun main(args: Array<String>) {
-    val ev = event("event") {
-        + "bla" by "me" from 15.00
-        + "bla2" by "me" from 16.00
+fun fib(input: Int): Long = when (input) {
+    0, 1 -> 1L
+    else -> fib(input - 1) + fib(input - 2)
+}
+
+
+fun <T, R> ((T) -> R).memoize(): ((T) -> R) {
+    val original = this
+    val cache = mutableMapOf<T, R>()
+    return { n: T -> cache.getOrPut(n) { original(n) } }
+}
+
+class Memoize<T, R>(val func: ((T) -> R)) {
+    val cache = mutableMapOf<T, R>()
+
+    operator fun getValue(thisRef: Any?, property: KProperty<*>) = { n: T ->
+        cache.getOrPut(n) { func(n) }
     }
-    println(ev)
+}
+
+val fibM: (Int) -> Long by Memoize { n: Int ->
+    when (n) {
+        0, 1 -> 1L
+        else -> fibM(n - 1) + fibM(n - 2)
+    }
+}
+
+fun main(args: Array<String>) {
+
+    println(fibM(100))
+//    lateinit var fib: (Int) -> Long
+//    fib = { n: Int ->
+//        when (n) {
+//            0, 1 -> 1L
+//            else -> fib(n - 1) + fib(n - 2)
+//        }
+//    }.memoize()
+//    println(fib(50))
+//    val ev = event("event") {
+//        + "bla" by "me" from 15.00
+//        + "bla2" by "me" from 16.00
+//    }
+//    println(ev)
 //    val talk = Talk(title = "bla",
 //        time = 15.00.hours,
 //        author = "me")
@@ -160,7 +198,7 @@ fun main(args: Array<String>) {
 //    val str : String? = "bla"
 
 //    println(str?.let { strLen(it) })
-    // chapter 6
+        // chapter 6
 //    println(alphabet())
 //    createAllDoneRunnable().run()
 //    val naturalNumber = generateSequence(0, { it + 1 })
@@ -183,7 +221,7 @@ fun main(args: Array<String>) {
 //    println(c1 == c2)
 //    val col = DelegatingCollection<Client>();
 //    println(col.isEmpty())
-    // 4.3
+        // 4.3
 //    val alice = PrivateUser("alice")
 //    alice.address = "Nijenbeek 4"
 //    println(alice.address)
@@ -237,143 +275,143 @@ fun main(args: Array<String>) {
 //    println("Mn for Red: ${getMnemonic(RED)}")
 //    println(mix(RED, YELLOW))
 //    println (eval(Sum(Sum(Num(1), Num(2)), Num (4))))
-}
-
-private infix fun <T> T.should(matcher: Matcher<T>) = matcher.test(this)
-
-interface Matcher<T> {
-    fun test(value: T)
-}
-
-class startWith(val prefix: String) : Matcher<String> {
-    override fun test(value: String) {
-        if (!value.startsWith(prefix)) throw AssertionError("wrong")
     }
 
-}
+    private infix fun <T> T.should(matcher: Matcher<T>) = matcher.test(this)
 
-val Int.days: Period
+    interface Matcher<T> {
+        fun test(value: T)
+    }
+
+    class startWith(val prefix: String) : Matcher<String> {
+        override fun test(value: String) {
+            if (!value.startsWith(prefix)) throw AssertionError("wrong")
+        }
+
+    }
+
+    val Int.days: Period
     get() = Period.ofDays(this)
 
-val Period.ago: LocalDate
+    val Period.ago: LocalDate
     get() = LocalDate.now() - this
 
-object Country : Table() {
-    val id = integer("id").autoIncrement().primaryKey()
-    val name = varchar("name", 50)
-}
-
-class Column<T>
-open class Table {
-    fun integer(name: String): Column<Int> {
-        return Column()
+    object Country : Table() {
+        val id = integer("id").autoIncrement().primaryKey()
+        val name = varchar("name", 50)
     }
 
-    fun varchar(name: String, size: Int): Column<String> {
-        return Column()
+    class Column<T>
+    open class Table {
+        fun integer(name: String): Column<Int> {
+            return Column()
+        }
+
+        fun varchar(name: String, size: Int): Column<String> {
+            return Column()
+        }
+
+        fun Column<Int>.autoIncrement(): Column<Int> {
+            return this
+        }
+
+        fun <T> Column<T>.primaryKey(): Column<T> {
+            return this
+        }
     }
 
-    fun Column<Int>.autoIncrement(): Column<Int> {
-        return this
+
+    fun buildString(builder: StringBuilder.() -> Unit): String {
+        val sb = StringBuilder()
+        sb.builder()
+        return sb.toString()
     }
-
-    fun <T> Column<T>.primaryKey(): Column<T> {
-        return this
-    }
-}
-
-
-fun buildString(builder: StringBuilder.() -> Unit): String {
-    val sb = StringBuilder()
-    sb.builder()
-    return sb.toString()
-}
 
 //fun serialize(obj: Any): String = buildString { serializeObject(obj) }
 
-private fun StringBuilder.serializeObject(x: Any) {
-    val kClass = x.javaClass.kotlin
-    val memberProperties = kClass.memberProperties
-    this.append(
-        memberProperties.joinToString(separator = ", ", prefix = "{ ", postfix = " }",
-            transform = { p: KProperty1<Any, *> -> "\"${p.name}\": ${p.get(x)}" })
+    private fun StringBuilder.serializeObject(x: Any) {
+        val kClass = x.javaClass.kotlin
+        val memberProperties = kClass.memberProperties
+        this.append(
+            memberProperties.joinToString(separator = ", ", prefix = "{ ", postfix = " }",
+                transform = { p: KProperty1<Any, *> -> "\"${p.name}\": ${p.get(x)}" })
+        )
+    }
+
+    fun foo(x: Int) = println(x)
+    fun sum(x1: Int, x2: Int): Int = x1 + x2
+    var counter = 0
+
+    fun <T> copyList(source: MutableList<T>, destination: MutableList<in T>) {
+        for (item in source) {
+            destination.add(item)
+        }
+    }
+
+    interface FieldValidator<in T> {
+        fun validate(input: T): Boolean
+    }
+
+    object DefaultStringValidator : FieldValidator<String> {
+        override fun validate(input: String) = input.isNotEmpty()
+    }
+
+    object DefaultIntValidator : FieldValidator<Int> {
+        override fun validate(input: Int) = input >= 0
+    }
+
+    object validators {
+        private val validators = mutableMapOf<KClass<*>, FieldValidator<*>>()
+
+        fun <T : Any> registerValidator(validator: FieldValidator<T>, cl: KClass<T>) {
+            validators[cl] = validator
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        fun <T : Any> get(cl: KClass<T>): FieldValidator<T> {
+            return validators[cl] as? FieldValidator<T> ?: throw IllegalArgumentException("Did not find validator")
+        }
+    }
+
+    interface Company
+
+    class CompanyImpl : Company
+
+    data class PersonJ(
+        @JsonName("alias")
+        val firstName: String,
+        @JsonExclude
+        val age: Int? = null,
+        @DeserializeInterface(CompanyImpl::class)
+        val company: Company,
+        @CustomSerializer(DateSerializer::class)
+        val birthDate: Date
     )
-}
 
-fun foo(x: Int) = println(x)
-fun sum(x1: Int, x2: Int): Int = x1 + x2
-var counter = 0
+    annotation class CustomSerializer(val serializer: KClass<out ValueSerializer<*>>)
 
-fun <T> copyList(source: MutableList<T>, destination: MutableList<in T>) {
-    for (item in source) {
-        destination.add(item)
-    }
-}
-
-interface FieldValidator<in T> {
-    fun validate(input: T): Boolean
-}
-
-object DefaultStringValidator : FieldValidator<String> {
-    override fun validate(input: String) = input.isNotEmpty()
-}
-
-object DefaultIntValidator : FieldValidator<Int> {
-    override fun validate(input: Int) = input >= 0
-}
-
-object validators {
-    private val validators = mutableMapOf<KClass<*>, FieldValidator<*>>()
-
-    fun <T : Any> registerValidator(validator: FieldValidator<T>, cl: KClass<T>) {
-        validators[cl] = validator
+    class DateSerializer : ValueSerializer<Date> {
+        override fun toJson(input: Date): String = ""
+        override fun fromJson(s: String): Date = Date()
     }
 
-    @Suppress("UNCHECKED_CAST")
-    fun <T : Any> get(cl: KClass<T>): FieldValidator<T> {
-        return validators[cl] as? FieldValidator<T> ?: throw IllegalArgumentException("Did not find validator")
+    interface ValueSerializer<T> {
+        fun toJson(input: T): String
+        fun fromJson(s: String): T
+
     }
-}
 
-interface Company
+    annotation class DeserializeInterface(val clazz: KClass<out Any>)
 
-class CompanyImpl : Company
+    annotation class JsonExclude
 
-data class PersonJ(
-    @JsonName("alias")
-    val firstName: String,
-    @JsonExclude
-    val age: Int? = null,
-    @DeserializeInterface(CompanyImpl::class)
-    val company: Company,
-    @CustomSerializer(DateSerializer::class)
-    val birthDate: Date
-)
+    annotation class JsonName(val name: String)
 
-annotation class CustomSerializer(val serializer: KClass<out ValueSerializer<*>>)
-
-class DateSerializer : ValueSerializer<Date> {
-    override fun toJson(input: Date): String = ""
-    override fun fromJson(s: String): Date = Date()
-}
-
-interface ValueSerializer<T> {
-    fun toJson(input: T): String
-    fun fromJson(s: String): T
-
-}
-
-annotation class DeserializeInterface(val clazz: KClass<out Any>)
-
-annotation class JsonExclude
-
-annotation class JsonName(val name: String)
-
-fun enumerateCats(f: (Cat) -> Number) {}
-fun Animal.getIndex(): Int = 0
-open class Animal {
-    fun feed() = println("feeding")
-}
+    fun enumerateCats(f: (Cat) -> Number) {}
+    fun Animal.getIndex(): Int = 0
+    open class Animal {
+        fun feed() = println("feeding")
+    }
 //
 //class Herd<out T : Animal>(val members: List<T>) {
 //    val size: Int get() = members.size
@@ -397,75 +435,75 @@ open class Animal {
 //    feedAll(cats)
 //}
 
-fun <T : Number> oneHalf(n: T): Double = n.toDouble() / 2.0;
+    fun <T : Number> oneHalf(n: T): Double = n.toDouble() / 2.0;
 
-//fun <T : Comparable<T>> max(first: T, second: T): T = if (first > second) first else second
-fun <T> max(first: T, second: T): T where T : Comparable<T>, T : Any = if (first > second) first else second
+    //fun <T : Comparable<T>> max(first: T, second: T): T = if (first > second) first else second
+    fun <T> max(first: T, second: T): T where T : Comparable<T>, T : Any = if (first > second) first else second
 
-inline fun <reified T> List<*>.filterInstanceOf(): List<T> {
-    val dest = mutableListOf<T>();
-    for (item in this) {
-        if (item is T) {
-            dest.add(item)
+    inline fun <reified T> List<*>.filterInstanceOf(): List<T> {
+        val dest = mutableListOf<T>();
+        for (item in this) {
+            if (item is T) {
+                dest.add(item)
+            }
+        }
+        return dest
+    }
+
+    fun lookForAlice(persons: List<Person>) {
+        persons.forEach(fun(person) {
+            if (person.name == "Alice") return
+            println("not alice")
+        })
+    }
+
+    data class SiteVisit(
+        val path: String,
+        val duration: Double,
+        val os: OS
+    )
+
+    enum class OS { WINDOWS, LINUX, MAC, IOS, ANDROID }
+
+    fun List<SiteVisit>.averageDurationForOs(osToFilter: OS) =
+        this.filter { it.os == osToFilter }.map { it.duration }.average()
+
+    inline fun List<SiteVisit>.averageDurationFor(predicate: (SiteVisit) -> Boolean) =
+        this.filter(predicate).map { it.duration }.average()
+
+    fun readFirstLineFromFile(path: String): String {
+        return BufferedReader(FileReader(path)).use { it.readLine() }
+    }
+
+    enum class Delivery { STANDARD, EXPEDITED }
+    class Order(val itemCount: Int)
+
+    fun getShippingCostCalculator(delivery: Delivery): (Order) -> Double {
+        if (delivery == Delivery.EXPEDITED) {
+            return { order -> 6 + 2.1 * order.itemCount }
+        }
+        return { order -> 1.2 * order.itemCount }
+    }
+
+    fun twoThree(func: (Int, Int) -> Int, transform: ((Int) -> Unit)? = { println(it) }): Unit {
+        val res = func(2, 3)
+        transform?.invoke(res)
+    }
+
+    open class PropertyChangeAware {
+        protected val changeSupport = PropertyChangeSupport(this)
+        fun addPropertyChangeListener(listener: PropertyChangeListener) {
+            changeSupport.addPropertyChangeListener(listener)
+        }
+
+        fun removePropertyChangeListener(listener: PropertyChangeListener) {
+            changeSupport.removePropertyChangeListener(listener)
         }
     }
-    return dest
-}
 
-fun lookForAlice(persons: List<Person>) {
-    persons.forEach(fun(person) {
-        if (person.name == "Alice") return
-        println("not alice")
-    })
-}
+    class Person(val name: String, val age: Int, salary: Int = 10000) {
 
-data class SiteVisit(
-    val path: String,
-    val duration: Double,
-    val os: OS
-)
-
-enum class OS { WINDOWS, LINUX, MAC, IOS, ANDROID }
-
-fun List<SiteVisit>.averageDurationForOs(osToFilter: OS) =
-    this.filter { it.os == osToFilter }.map { it.duration }.average()
-
-inline fun List<SiteVisit>.averageDurationFor(predicate: (SiteVisit) -> Boolean) =
-    this.filter(predicate).map { it.duration }.average()
-
-fun readFirstLineFromFile(path: String): String {
-    return BufferedReader(FileReader(path)).use { it.readLine() }
-}
-
-enum class Delivery { STANDARD, EXPEDITED }
-class Order(val itemCount: Int)
-
-fun getShippingCostCalculator(delivery: Delivery): (Order) -> Double {
-    if (delivery == Delivery.EXPEDITED) {
-        return { order -> 6 + 2.1 * order.itemCount }
     }
-    return { order -> 1.2 * order.itemCount }
-}
-
-fun twoThree(func: (Int, Int) -> Int, transform: ((Int) -> Unit)? = { println(it) }): Unit {
-    val res = func(2, 3)
-    transform?.invoke(res)
-}
-
-open class PropertyChangeAware {
-    protected val changeSupport = PropertyChangeSupport(this)
-    fun addPropertyChangeListener(listener: PropertyChangeListener) {
-        changeSupport.addPropertyChangeListener(listener)
-    }
-
-    fun removePropertyChangeListener(listener: PropertyChangeListener) {
-        changeSupport.removePropertyChangeListener(listener)
-    }
-}
-
-class Person(val name: String, val age: Int, salary: Int = 10000) {
-
-}
 
 //    override fun compareTo(other: Point): Int = compareValuesBy(this, other, Point::x, Point::y)
 //    operator fun get(index: Int): Int {
@@ -483,40 +521,40 @@ class Person(val name: String, val age: Int, salary: Int = 10000) {
 //    }
 
 
-operator fun ClosedRange<LocalDate>.iterator(): Iterator<LocalDate> =
-    object : Iterator<LocalDate> {
-        var current = start
-        override fun hasNext() =
-            current <= endInclusive
+    operator fun ClosedRange<LocalDate>.iterator(): Iterator<LocalDate> =
+        object : Iterator<LocalDate> {
+            var current = start
+            override fun hasNext() =
+                current <= endInclusive
 
-        override fun next() = current.apply {
-            current = plusDays(1)
+            override fun next() = current.apply {
+                current = plusDays(1)
+            }
+        }
+
+    fun strLen(input: String?) = input?.length ?: 0
+
+    data class Rectangle(val ul: Point, val lr: Point) {
+        operator fun contains(p: Point): Boolean {
+            return p.x in ul.x until lr.x && p.y in lr.y until ul.y
         }
     }
 
-fun strLen(input: String?) = input?.length ?: 0
 
-data class Rectangle(val ul: Point, val lr: Point) {
-    operator fun contains(p: Point): Boolean {
-        return p.x in ul.x until lr.x && p.y in lr.y until ul.y
-    }
-}
-
-
-data class Point(val x: Int, val y: Int) {
+    data class Point(val x: Int, val y: Int) {
 
 //    operator fun plus(o: Point): Point = Point(x + o.x, y + o.y)
 
 //    }
-}
+    }
 
 
-//operator fun Double.times(o: Point) = Point((this * o.x).toInt(), (this * o.y).toInt())
-fun String?.strLenOrZero(): Int = this?.length ?: 0
+    //operator fun Double.times(o: Point) = Point((this * o.x).toInt(), (this * o.y).toInt())
+    fun String?.strLenOrZero(): Int = this?.length ?: 0
 
-fun yellAt(p: Player) = println("COME HERE, ${(p.name ?: "random").toUpperCase()}!")
+    fun yellAt(p: Player) = println("COME HERE, ${(p.name ?: "random").toUpperCase()}!")
 
-fun <T : Any> printHashCode(input: T) = println(input.hashCode())
+    fun <T : Any> printHashCode(input: T) = println(input.hashCode())
 
 //fun alphabet(): String =
 //    StringBuilder().apply {
@@ -544,179 +582,179 @@ fun <T : Any> printHashCode(input: T) = println(input.hashCode())
 //        append(("\nNow I know the alphabet!"))
 //    }
 
-fun createAllDoneRunnable(): Runnable {
-    return Runnable { println("all done") }
-}
-
-fun Person.isAdult() = age >= 18
-
-fun salute() = "salute!"
-
-class WebsiteUser private constructor(val nickname: String) {
-    companion object {
-        fun fromEmail(email: String) =
-            WebsiteUser(email.substringBefore('@'))
-
-        fun fromFaceBookId(id: Int) =
-            WebsiteUser(id.toString())
+    fun createAllDoneRunnable(): Runnable {
+        return Runnable { println("all done") }
     }
 
-    override fun toString() = nickname
-}
+    fun Person.isAdult() = age >= 18
 
-fun WebsiteUser.Companion.capitalize(nickname: String): WebsiteUser = fromEmail(nickname.toUpperCase())
+    fun salute() = "salute!"
 
-class A {
-    companion object {
-        fun bar() {
-            println("bar called")
+    class WebsiteUser private constructor(val nickname: String) {
+        companion object {
+            fun fromEmail(email: String) =
+                WebsiteUser(email.substringBefore('@'))
+
+            fun fromFaceBookId(id: Int) =
+                WebsiteUser(id.toString())
+        }
+
+        override fun toString() = nickname
+    }
+
+    fun WebsiteUser.Companion.capitalize(nickname: String): WebsiteUser = fromEmail(nickname.toUpperCase())
+
+    class A {
+        companion object {
+            fun bar() {
+                println("bar called")
+            }
         }
     }
-}
 
-object Payroll {
-    val allEmployees = arrayListOf<Person>()
+    object Payroll {
+        val allEmployees = arrayListOf<Person>()
 
-    fun calcSalary() {
-        for (employee in allEmployees) {
-            //
+        fun calcSalary() {
+            for (employee in allEmployees) {
+                //
+            }
         }
     }
-}
 
 
-class DelegatingCollection<T>(val innerList: Collection<T> = ArrayList<T>()) : Collection<T> by innerList {
-    override fun isEmpty(): Boolean {
-        println("I'm empty")
-        return innerList.isEmpty()
+    class DelegatingCollection<T>(val innerList: Collection<T> = ArrayList<T>()) : Collection<T> by innerList {
+        override fun isEmpty(): Boolean {
+            println("I'm empty")
+            return innerList.isEmpty()
+        }
     }
-}
 
-data class Client(val name: String, val age: Int)
+    data class Client(val name: String, val age: Int)
 
-interface User {
-    val nickname: String
-    val yellName: String get() = nickname.toUpperCase()
-}
+    interface User {
+        val nickname: String
+        val yellName: String get() = nickname.toUpperCase()
+    }
 
-class PrivateUser(override val nickname: String) : User {
-    var address: String = "unspecified"
-        set(value) {
-            println(
-                """
+    class PrivateUser(override val nickname: String) : User {
+        var address: String = "unspecified"
+            set(value) {
+                println(
+                    """
                     Address was changed for $nickname:
                     "$field" -> "$value".""".trimIndent()
-            )
-            field = value
+                )
+                field = value
+            }
+    }
+
+    class SubscribingUser(val email: String) : User {
+        override val nickname: String
+            get() = email.substringBefore("@")
+    }
+
+    class FaceBookUser(val accountId: Int) : User {
+        override val nickname = getFaceBookName(accountId);
+
+        private fun getFaceBookName(accountId: Int): String {
+            return "user"
         }
-}
-
-class SubscribingUser(val email: String) : User {
-    override val nickname: String
-        get() = email.substringBefore("@")
-}
-
-class FaceBookUser(val accountId: Int) : User {
-    override val nickname = getFaceBookName(accountId);
-
-    private fun getFaceBookName(accountId: Int): String {
-        return "user"
-    }
-}
-
-interface State : Serializable
-
-interface View {
-    fun getCurrentState(): State
-    fun restoreState(state: State) {}
-}
-
-class Button(val state: String) : View {
-
-    inner class ButtonState : State {
-        fun printState() = println(this@Button.state);
     }
 
-    fun printCurrentState(): Unit = ButtonState().printState();
-    override fun getCurrentState(): State {
-        TODO("Not yet implemented")
-    }
-}
+    interface State : Serializable
 
-
-interface Clickable {
-    fun click()
-    fun move() {
-        println("clicker was moved")
-    }
-}
-
-
-interface Focusable {
-    fun move() {
-        println("focusser was moved")
-    }
-}
-
-open class RoundButton {
-    internal fun click() {
-        println("clicking round button")
+    interface View {
+        fun getCurrentState(): State
+        fun restoreState(state: State) {}
     }
 
-    fun close() {
-        println("closing time")
-    }
-}
+    class Button(val state: String) : View {
 
-fun RoundButton.go() {
-    click()
-    close()
-}
+        inner class ButtonState : State {
+            fun printState() = println(this@Button.state);
+        }
 
-
-fun fizzBuzz(i: Int) = when {
-    i % 15 == 0 -> "FizzBuzz "
-    i % 3 == 0 -> "Fizz "
-    i % 5 == 0 -> "Buzz "
-    else -> "$i "
-}
-
-fun eval(input: Expr): Int {
-    when (input) {
-        is Num -> return input.value
-        is Sum -> return eval(input.left) + eval(input.right)
-    }
-}
-
-sealed class Expr
-class Num(val value: Int) : Expr()
-class Sum(val left: Expr, val right: Expr) : Expr()
-
-fun max(a: Int, b: Int) = if (a > b) a else b
-
-enum class Color(val r: Int, val g: Int, val b: Int) {
-    RED(255, 0, 0), ORANGE(255, 165, 0),
-    YELLOW(255, 255, 0), GREEN(0, 255, 0), BLUE(0, 0, 255),
-    INDIGO(75, 0, 130), VIOLET(238, 130, 238);
-
-}
-
-
-fun getMnemonic(color: Color) =
-    when (color) {
-        RED -> "Richard"
-        ORANGE -> "of"
-        YELLOW -> "York"
-        GREEN -> "Gave"
-        BLUE -> "Battle"
-        INDIGO -> "In"
-        VIOLET -> "Vain"
+        fun printCurrentState(): Unit = ButtonState().printState();
+        override fun getCurrentState(): State {
+            TODO("Not yet implemented")
+        }
     }
 
-fun mix(c1: Color, c2: Color) =
-    when (setOf(c1, c2)) {
-        setOf(RED, YELLOW) -> ORANGE
-        setOf(YELLOW, BLUE) -> GREEN
-        setOf(RED, VIOLET) -> INDIGO
-        else -> throw Exception("Dirty color")
+
+    interface Clickable {
+        fun click()
+        fun move() {
+            println("clicker was moved")
+        }
     }
+
+
+    interface Focusable {
+        fun move() {
+            println("focusser was moved")
+        }
+    }
+
+    open class RoundButton {
+        internal fun click() {
+            println("clicking round button")
+        }
+
+        fun close() {
+            println("closing time")
+        }
+    }
+
+    fun RoundButton.go() {
+        click()
+        close()
+    }
+
+
+    fun fizzBuzz(i: Int) = when {
+        i % 15 == 0 -> "FizzBuzz "
+        i % 3 == 0 -> "Fizz "
+        i % 5 == 0 -> "Buzz "
+        else -> "$i "
+    }
+
+    fun eval(input: Expr): Int {
+        when (input) {
+            is Num -> return input.value
+            is Sum -> return eval(input.left) + eval(input.right)
+        }
+    }
+
+    sealed class Expr
+    class Num(val value: Int) : Expr()
+    class Sum(val left: Expr, val right: Expr) : Expr()
+
+    fun max(a: Int, b: Int) = if (a > b) a else b
+
+    enum class Color(val r: Int, val g: Int, val b: Int) {
+        RED(255, 0, 0), ORANGE(255, 165, 0),
+        YELLOW(255, 255, 0), GREEN(0, 255, 0), BLUE(0, 0, 255),
+        INDIGO(75, 0, 130), VIOLET(238, 130, 238);
+
+    }
+
+
+    fun getMnemonic(color: Color) =
+        when (color) {
+            RED -> "Richard"
+            ORANGE -> "of"
+            YELLOW -> "York"
+            GREEN -> "Gave"
+            BLUE -> "Battle"
+            INDIGO -> "In"
+            VIOLET -> "Vain"
+        }
+
+    fun mix(c1: Color, c2: Color) =
+        when (setOf(c1, c2)) {
+            setOf(RED, YELLOW) -> ORANGE
+            setOf(YELLOW, BLUE) -> GREEN
+            setOf(RED, VIOLET) -> INDIGO
+            else -> throw Exception("Dirty color")
+        }
