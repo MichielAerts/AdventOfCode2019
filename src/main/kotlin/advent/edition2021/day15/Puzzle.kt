@@ -6,6 +6,7 @@ import test.advent.edition2021.getDirectNeighbours
 import test.advent.edition2021.getOrThrow
 import test.advent.edition2021.transpose
 import java.io.File
+import java.util.*
 
 val day = 15;
 val file = File("src/main/resources/edition2021/day${day}/input")
@@ -14,14 +15,14 @@ class Puzzle(private val rawInput: List<String>) {
     fun runPart1() {
         println("Part 1 of Day $day")
         val cave = Cave.createCave(rawInput)
-//        println(cave.findPathWithLowestTotalRisk() - 1)
+        println(cave.findPathWithLowestTotalRisk())
     }
 
     fun runPart2() {
         println("Part 2 of Day $day")
         val cave = Cave.createBigCave(rawInput)
 //        println(cave)
-        println(cave.findPathWithLowestTotalRisk() - 1)
+        println(cave.findPathWithLowestTotalRisk())
     }
 }
 
@@ -33,30 +34,56 @@ data class Cave(
 ) {
 
     fun findPathWithLowestTotalRisk(): Int {
-        findAllPaths(points[0][0], points[points.size - 1][points[0].size - 1], mutableListOf(points[0][0]))
+//        findAllPaths(points[0][0], points[points.size - 1][points[0].size - 1])
+        findAllPathsPQ(points[0][0], points[points.size - 1][points[0].size - 1])
         return currentLowestTotalRisk
     }
+    
+    private fun findAllPathsPQ(start: Point, end: Point) {
+//        println("searching for $start till $end, $localPathList")
+        
+        val pq = PriorityQueue<Route>(compareBy { it.risk })
+        pq.add(Route(start, 0))
+        while (!pq.isEmpty()) {
+            val (point, risk) = pq.remove()
+            if (point == end) {
+                currentLowestTotalRisk = risk
+                println("new path with risk: $currentLowestTotalRisk")
+                return
+            }
+            for (edge in system.outgoingEdgesOf(point)) {
+                val target = edge.target
+                val newRisk = risk + target.z
+                if (newRisk > currentLowestTotalRisk) continue
 
-    private fun findAllPaths(start: Point, end: Point, localPathList: List<Point>, currentRisk: Int = 0) {
+                val lowestRisk = lowestRiskMap.getOrThrow(target)
+                if (newRisk >= lowestRisk) continue
+                lowestRiskMap[target] = newRisk
+//            println("new path to $target with risk: $currentRisk")
+                pq.add(Route(target, newRisk))
+            }
+        }
+    }
+
+    private fun findAllPaths(start: Point, end: Point, currentRisk: Int = 0) {
 //        println("searching for $start till $end, $localPathList")
         if (start == end) {
-            currentLowestTotalRisk = localPathList.sumOf { it.z }
+            currentLowestTotalRisk = currentRisk
             println("new path with risk: $currentLowestTotalRisk")
             return
         }
 
         for (edge in system.outgoingEdgesOf(start)) {
             val target = edge.target
-            if (target in localPathList) continue
             val newRisk = currentRisk + target.z 
             if (newRisk > currentLowestTotalRisk) continue
 
             val lowestRisk = lowestRiskMap.getOrThrow(target)
             if (newRisk >= lowestRisk) continue
             lowestRiskMap[target] = newRisk
-            println("new path to $target with risk: $currentRisk, $localPathList")
+//            println("new path to $target with risk: $currentRisk")
 
-            findAllPaths(target, end, localPathList + target, newRisk)
+            findAllPaths(target, end, newRisk)
         }
     }
 
@@ -93,6 +120,11 @@ data class Cave(
             return Cave(bigCave)
         }
     }
+}
+
+class Route(val p: Point, val risk: Int) {
+    operator fun component1() = p
+    operator fun component2() = risk
 }
 
 class Edge(val source: Point, val target: Point)
