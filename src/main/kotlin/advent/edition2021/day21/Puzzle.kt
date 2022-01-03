@@ -33,7 +33,7 @@ class Puzzle(private val rawInput: List<String>) {
     }
 }
 
-data class QuantumGame(var map: MutableMap<String, Long>, val die: DiracDie = DiracDie(), var winsPlayer1: Long = 0, var winsPlayer2: Long = 0) {
+data class QuantumGame(var map: MutableMap<String, Long>, val die: DiracDie = DiracDie.createDie(), var winsPlayer1: Long = 0, var winsPlayer2: Long = 0) {
     
     fun runStep(step: Int) {
         // do three rolls!
@@ -77,13 +77,15 @@ data class QuantumGame(var map: MutableMap<String, Long>, val die: DiracDie = Di
     }
 }
 
-data class DiracDie(var rolls: List<List<Int>> = listOf()) {
-    init {
-        val newList = mutableListOf<List<Int>>()
-        for (i in 1..3) for (j in 1..3) for (k in 1..3) {
-            newList.add(listOf(i, j, k))
+class DiracDie(val rolls: List<List<Int>>) {
+    companion object {
+        fun createDie(): DiracDie {
+            val newList = mutableListOf<List<Int>>()
+            for (i in 1..3) for (j in 1..3) for (k in 1..3) {
+                newList.add(listOf(i, j, k))
+            }
+            return DiracDie(newList.toList())
         }
-        rolls = newList.toList()
     }
 }
 data class Game(
