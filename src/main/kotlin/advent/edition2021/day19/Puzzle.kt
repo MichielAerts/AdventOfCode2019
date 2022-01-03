@@ -77,12 +77,6 @@ data class Scanner(
 //                        println("found shared beacon for $point and $otherPoint, scanner ${other.id } at ${otherPoint.getDistanceTo(point)} from scanner $id")
                         other.distanceToScanner0 = otherPoint.getDistanceTo(point) + distanceToScanner0!!
                         other.orientation = idx
-//                        val (xo, yo, zo) = otherPoint.rotationxyz
-//                        val (xf, yf, zf) = rotationFromOrientationScanner0!!
-//                        println("rotation of scanner ${other.id} compared to $id is ${otherPoint.rotationxyz}")
-//                        other.rotationFromOrientationScanner0 = Triple(((xf - xo) % 4), ((yf + yo) % 4), ((zf + zo) % 4))
-//                        println("rotation of scanner ${other.id} compared to 0 is ${other.rotationFromOrientationScanner0}")
-
                     }
                 }
             }
@@ -128,7 +122,6 @@ class Orientations {
             val single = mutableSetOf<Point>()
             for (i in 0..3) for (j in 0..3) for (k in 0..3) {
                 val rotatedPoint = point.rotate(Triple(i, j, k))
-                rotatedPoint.rotationxyz = Triple(i, j, k)
                 single.add(rotatedPoint)
             }
             return single.toList()

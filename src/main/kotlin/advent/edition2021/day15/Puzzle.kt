@@ -111,8 +111,10 @@ data class Cave(
                 for (r in original) {
                     val newRow = mutableListOf<Point>()
                     for (j in 0..4) { //h
-                        newRow.addAll(r.map { Point(it.x + j * size, it.y + i * size, 
-                            if (it.z + (i + j) > 9) it.z + (i + j) - 9 else it.z + (i + j))  })
+                        newRow.addAll(r.map { Point(
+                            it.x + j * size, it.y + i * size,
+                            if (it.z + (i + j) > 9) it.z + (i + j) - 9 else it.z + (i + j)
+                        )  })
                     }
                     bigCave.add(newRow)
                 }

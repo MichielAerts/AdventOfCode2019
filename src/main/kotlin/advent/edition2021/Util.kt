@@ -32,6 +32,10 @@ fun <E> List<List<E>>.transpose(): List<List<E>> {
     return t
 }
 
+fun List<List<Char>>.countAllOccurrences(c: Char): Int = joinToString("") { it.joinToString("") }.count { it == c }
+
+fun List<Char>.countOccurrences(c: Char): Int = joinToString("").count { it == c }
+
 fun <E> List<E>.findOrThrow(function: (E) -> Boolean): E = this.find(function) ?: throw IllegalStateException("not found")
 
 fun <K, V> Map<K, V>.getOrThrow(k: K): V = this[k] ?: throw IllegalStateException("not found")
@@ -46,29 +50,14 @@ fun <K, V> Map<K, V>.getAllInListOrThrow(vararg keys: K): List<V> {
 //
 
 // Points & Neighbours
-open class Point(val x: Int, val y: Int, var z: Int = 0, var rotationxyz: Triple<Int, Int, Int> = Triple(0, 0, 0)) {
+open class Point(val x: Int, val y: Int, var z: Int = 0, var charValue: Char = '.') {
     constructor(x: String, y: String) : this(x.toInt(), y.toInt())
     constructor(x: String, y: String, z: String) : this(x.toInt(), y.toInt(), z.toInt())
 
-    fun rotateX(): Point = Point(x, -z, y)
-    fun rotateY(): Point = Point(-z, y, x)
-    fun rotateZ(): Point = Point(-y, x, z)
+    private fun rotateX(): Point = Point(x, -z, y)
+    private fun rotateY(): Point = Point(-z, y, x)
+    private fun rotateZ(): Point = Point(-y, x, z)
     
-    fun rotate(times: Int, func: (Point) -> Point): Point {
-        var newP = this
-        repeat(times) { newP = func.invoke(newP) }
-        return newP
-    }
-
-
-    fun invertRotation(xyz: Triple<Int, Int, Int>): Point {
-        var newP = this
-        repeat(4 - xyz.third) { newP = newP.rotateZ() }
-        repeat(4 - xyz.second) { newP = newP.rotateY() }
-        repeat(4 - xyz.first) { newP = newP.rotateX() }
-        return newP
-    }
-
     fun rotate(xyz: Triple<Int, Int, Int>): Point {
         var newP = this
         repeat(xyz.first) { newP = newP.rotateX() }
@@ -113,27 +102,6 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var rotationxyz: Triple
 
 data class Distance(val dx: Int, val dy: Int, val dz: Int) {
     operator fun minus(other: Distance): Distance = Distance(dx  - other.dx, dy - other.dy, dz - other.dz)
-
-    fun rotateX(): Distance = Distance(dx, -dz, dy)
-    fun rotateY(): Distance = Distance(-dz, dy, dx)
-    fun rotateZ(): Distance = Distance(-dy, dx, dz)
-
-    fun rotate(xyz: Triple<Int, Int, Int>): Distance {
-        var newD = this
-        repeat(xyz.first) { newD = newD.rotateX() }
-        repeat(xyz.second) { newD = newD.rotateY() }
-        repeat(xyz.third) { newD = newD.rotateZ() }
-        return newD
-    }
-
-    fun invertRotation(xyz: Triple<Int, Int, Int>): Distance {
-        var newD = this
-        repeat(4 - xyz.third) { newD = newD.rotateZ() }
-        repeat(4 - xyz.second) { newD = newD.rotateY() }
-        repeat(4 - xyz.first) { newD = newD.rotateX() }
-        return newD
-    }
-
     operator fun plus(other: Distance): Distance = Distance(dx + other.dx, dy + other.dy, dz + other.dz)
     fun getManhattanDistance(other: Distance): Int = (dx - other.dx).absoluteValue + (dy - other.dy).absoluteValue + (dz - other.dz).absoluteValue 
 }
@@ -157,6 +125,21 @@ fun List<List<Point>>.getAllNeighbours(p: Point) : PointAndNeighbours {
         Pos(p.x + 1, p.y + 1)
     )
     return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
+}
+
+fun List<List<Char>>.getThreeByThreeSquare(x: Int, y: Int) : List<Char> {
+    val points = listOf(
+        Pos(x - 1, y - 1),
+        Pos(x, y - 1),
+        Pos(x + 1, y - 1),
+        Pos(x - 1, y),
+        Pos(x, y),
+        Pos(x + 1, y),
+        Pos(x - 1, y + 1),
+        Pos(x, y + 1),
+        Pos(x + 1, y + 1)
+    )
+    return points.map { this[it.y][it.x] }
 }
 
 fun List<List<Point>>.getPoint(x: Int, y: Int) : Point? {
