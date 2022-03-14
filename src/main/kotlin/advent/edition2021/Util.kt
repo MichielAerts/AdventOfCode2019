@@ -21,6 +21,13 @@ fun <E> List<E>.subListTillEnd(fromIndex: Int): List<E> = this.subList(fromIndex
 
 fun <E> List<E>?.subList(fromIndex: Int): List<E>? = this?.subList(fromIndex, this.size)
 
+fun <T> List<T>.toPair(): Pair<T, T> {
+    if (this.size != 2) {
+        throw IllegalArgumentException("List is not of length 2!")
+    }
+    return Pair(this[0], this[1])
+}
+
 fun <E> List<List<E>>.transpose(): List<List<E>> {
     val t = MutableList(this[0].size) { MutableList(this.size) { this[0][0] } }
 
@@ -36,7 +43,8 @@ fun List<List<Char>>.countAllOccurrences(c: Char): Int = joinToString("") { it.j
 
 fun List<Char>.countOccurrences(c: Char): Int = joinToString("").count { it == c }
 
-fun <E> List<E>.findOrThrow(function: (E) -> Boolean): E = this.find(function) ?: throw IllegalStateException("not found")
+fun <E> List<E>.findOrThrow(function: (E) -> Boolean): E =
+    this.find(function) ?: throw IllegalStateException("not found")
 
 fun <K, V> Map<K, V>.getOrThrow(k: K): V = this[k] ?: throw IllegalStateException("not found")
 
@@ -47,6 +55,8 @@ fun <K, V> Map<K, V>.getAllInListOrThrow(vararg keys: K): List<V> {
     }
     return newList
 }
+
+fun <T> T.log(): T { println(this); return this }
 //
 
 // Points & Neighbours
@@ -57,7 +67,7 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var charValue: Char = '
     private fun rotateX(): Point = Point(x, -z, y)
     private fun rotateY(): Point = Point(-z, y, x)
     private fun rotateZ(): Point = Point(-y, x, z)
-    
+
     fun rotate(xyz: Triple<Int, Int, Int>): Point {
         var newP = this
         repeat(xyz.first) { newP = newP.rotateX() }
@@ -65,17 +75,17 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var charValue: Char = '
         repeat(xyz.third) { newP = newP.rotateZ() }
         return newP
     }
-    
-    fun getRiskLevel() : Int = z + 1
 
-    fun getDistanceTo(other: Point) : Distance = Distance(other.x - x, other.y - y, other.z - z)
+    fun getRiskLevel(): Int = z + 1
 
-    fun getDistanceToAll(others: List<Point>) : List<Distance> = others.map { Distance(it.x - x, it.y - y, it.z - z) }
+    fun getDistanceTo(other: Point): Distance = Distance(other.x - x, other.y - y, other.z - z)
+
+    fun getDistanceToAll(others: List<Point>): List<Distance> = others.map { Distance(it.x - x, it.y - y, it.z - z) }
 
     operator fun minus(d: Distance) = Point(x - d.dx, y - d.dy, z - d.dz)
-    
-    override fun toString(): String = "Point(x: $x, y: $y, z: $z)"
-    
+
+    override fun toString(): String = "Point(x: $x, y: $y, c: $charValue)"
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -101,22 +111,23 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var charValue: Char = '
 }
 
 data class Distance(val dx: Int, val dy: Int, val dz: Int) {
-    operator fun minus(other: Distance): Distance = Distance(dx  - other.dx, dy - other.dy, dz - other.dz)
+    operator fun minus(other: Distance): Distance = Distance(dx - other.dx, dy - other.dy, dz - other.dz)
     operator fun plus(other: Distance): Distance = Distance(dx + other.dx, dy + other.dy, dz + other.dz)
-    fun getManhattanDistance(other: Distance): Int = (dx - other.dx).absoluteValue + (dy - other.dy).absoluteValue + (dz - other.dz).absoluteValue 
+    fun getManhattanDistance(other: Distance): Int =
+        (dx - other.dx).absoluteValue + (dy - other.dy).absoluteValue + (dz - other.dz).absoluteValue
 }
 
 data class Pos(val x: Int, val y: Int)
 
-fun List<List<Point>>.getDirectNeighbours(p: Point) : PointAndNeighbours {
+fun List<List<Point>>.getDirectNeighbours(p: Point): PointAndNeighbours {
     val potentialNeighbours = listOf(Pos(p.x - 1, p.y), Pos(p.x + 1, p.y), Pos(p.x, p.y - 1), Pos(p.x, p.y + 1))
     return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
 }
 
-fun List<List<Point>>.getAllNeighbours(p: Point) : PointAndNeighbours {
+fun List<List<Point>>.getAllNeighbours(p: Point): PointAndNeighbours {
     val potentialNeighbours = listOf(
-        Pos(p.x - 1, p.y - 1), 
-        Pos(p.x, p.y - 1), 
+        Pos(p.x - 1, p.y - 1),
+        Pos(p.x, p.y - 1),
         Pos(p.x + 1, p.y - 1),
         Pos(p.x - 1, p.y),
         Pos(p.x + 1, p.y),
@@ -127,7 +138,7 @@ fun List<List<Point>>.getAllNeighbours(p: Point) : PointAndNeighbours {
     return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
 }
 
-fun List<List<Char>>.getThreeByThreeSquare(x: Int, y: Int) : List<Char> {
+fun List<List<Char>>.getThreeByThreeSquare(x: Int, y: Int): List<Char> {
     val points = listOf(
         Pos(x - 1, y - 1),
         Pos(x, y - 1),
@@ -142,7 +153,7 @@ fun List<List<Char>>.getThreeByThreeSquare(x: Int, y: Int) : List<Char> {
     return points.map { this[it.y][it.x] }
 }
 
-fun List<List<Point>>.getPoint(x: Int, y: Int) : Point? {
+fun List<List<Point>>.getPoint(x: Int, y: Int): Point? {
     if (x < 0 || x > (this[0].size - 1) || y < 0 || y > (this.size - 1)) return null
     return this[y][x]
 }
