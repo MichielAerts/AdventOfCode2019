@@ -1,5 +1,8 @@
 package test.advent.edition2021
 
+import test.advent.edition2021.day25.Direction
+import test.advent.edition2021.day25.Direction.EAST
+import test.advent.edition2021.day25.Direction.SOUTH
 import kotlin.math.absoluteValue
 
 // Regex
@@ -68,6 +71,11 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var charValue: Char = '
     private fun rotateY(): Point = Point(-z, y, x)
     private fun rotateZ(): Point = Point(-y, x, z)
 
+    
+    private fun isEastHerd() = charValue == '>'
+    private fun isSouthHerd() = charValue == 'v'
+    private fun isEmpty() = charValue == '.'
+    
     fun rotate(xyz: Triple<Int, Int, Int>): Point {
         var newP = this
         repeat(xyz.first) { newP = newP.rotateX() }
@@ -108,6 +116,34 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var charValue: Char = '
 
     fun toReferenceZero(distanceToScanner0: Distance) = this + distanceToScanner0
     operator fun plus(d: Distance): Point = Point(x + d.dx, y + d.dy, z + d.dz)
+    operator fun component1(): Int = x
+    operator fun component2(): Int = y
+    operator fun component3(): Int = z
+    private fun willMoveEast(floor: List<List<Point>>): Boolean = floor.getEastPointWithWrapAround(this).isEmpty()
+    private fun willMoveSouth(floor: List<List<Point>>): Boolean = floor.getSouthPointWithWrapAround(this).isEmpty()
+    private fun willMoveEastTo(floor: List<List<Point>>): Point = floor.getEastPointWithWrapAround(this)
+    private fun willMoveSouthTo(floor: List<List<Point>>): Point = floor.getSouthPointWithWrapAround(this)
+    fun isHerd(direction: Direction): Boolean {
+        return when(direction) {
+            EAST -> isEastHerd()
+            SOUTH -> isSouthHerd()
+        }
+    }
+
+    fun willMove(direction: Direction, floor: List<List<Point>>): Boolean {
+        return when(direction) {
+            EAST -> willMoveEast(floor)
+            SOUTH -> willMoveSouth(floor)
+        }
+    }
+
+    fun willMoveTo(direction: Direction, floor: List<List<Point>>): Point {
+        return when(direction) {
+            EAST -> willMoveEastTo(floor)
+            SOUTH -> willMoveSouthTo(floor)
+        }
+    }
+
 }
 
 data class Distance(val dx: Int, val dy: Int, val dz: Int) {
@@ -122,6 +158,19 @@ data class Pos(val x: Int, val y: Int)
 fun List<List<Point>>.getDirectNeighbours(p: Point): PointAndNeighbours {
     val potentialNeighbours = listOf(Pos(p.x - 1, p.y), Pos(p.x + 1, p.y), Pos(p.x, p.y - 1), Pos(p.x, p.y + 1))
     return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
+}
+
+fun List<List<Point>>.getEastPointWithWrapAround(p: Point): Point {
+    val xSize = this[0].size
+    val eastX = if (p.x + 1 < xSize) p.x + 1 else 0
+    return this[p.y][eastX]
+}
+
+
+fun List<List<Point>>.getSouthPointWithWrapAround(p: Point): Point {
+    val ySize = this.size
+    val southY = if (p.y + 1 < ySize) p.y + 1 else 0
+    return this[southY][p.x]
 }
 
 fun List<List<Point>>.getAllNeighbours(p: Point): PointAndNeighbours {
