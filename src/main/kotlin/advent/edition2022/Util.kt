@@ -28,6 +28,31 @@ fun <T> List<T>.toPair(): Pair<T, T> {
     return Pair(this[0], this[1])
 }
 
+fun <E> List<E>.splitBy(splitter: (E) -> Boolean): List<List<E>> {
+    val list = mutableListOf<MutableList<E>>()
+    var currentList = mutableListOf<E>()
+    for (item in this) {
+        if (splitter(item)) {
+            list += currentList;
+            currentList = mutableListOf();
+        } else {
+            currentList += item;
+        }
+    }
+    if (currentList.isNotEmpty()) list += currentList
+    return list;
+}
+
+fun IntRange.containsRange(o: IntRange): Boolean {
+    if (this.start > this.endInclusive || o.start > o.endInclusive) throw IllegalStateException("only incrementing IntRange supported")
+    return o.start >= this.start && o.endInclusive <= this.endInclusive
+}
+
+fun IntRange.hasOverlap(o: IntRange): Boolean {
+    if (this.start > this.endInclusive || o.start > o.endInclusive) throw IllegalStateException("only incrementing IntRange supported")
+    return this.intersect(o).isNotEmpty()
+}
+
 fun <E> List<List<E>>.transpose(): List<List<E>> {
     val t = MutableList(this[0].size) { MutableList(this.size) { this[0][0] } }
 
@@ -156,22 +181,6 @@ fun List<List<Char>>.getThreeByThreeSquare(x: Int, y: Int): List<Char> {
 fun List<List<Point>>.getPoint(x: Int, y: Int): Point? {
     if (x < 0 || x > (this[0].size - 1) || y < 0 || y > (this.size - 1)) return null
     return this[y][x]
-}
-
-
-fun <E> List<E>.splitBy(splitter: (E) -> Boolean): List<List<E>> {
-    val list = mutableListOf<MutableList<E>>()
-    var currentList = mutableListOf<E>()
-    for (item in this) {
-        if (splitter(item)) {
-            list += currentList;
-            currentList = mutableListOf();
-        } else {
-            currentList += item;
-        }
-    }
-    if (currentList.isNotEmpty()) list += currentList
-    return list;
 }
 
 data class PointAndNeighbours(val point: Point, val neighbours: List<Point>)
