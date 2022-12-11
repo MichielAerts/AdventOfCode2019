@@ -39,13 +39,14 @@ fun main() {
     println(crosses)
 //    println(crosses.map { it.getManhattenDistance() }.min())
 //    println(locationsA.indexOfFirst { l -> l.equals(crosses.elementAt(1)) })
-    println(crosses
-        .map { l_cross ->
-            Pair(locationsA.indexOfFirst { it.equals(l_cross) } + 1,
-                locationsB.indexOfFirst { it.equals(l_cross) } + 1)
-        }
-        .map { it.first + it.second }
-        .min()
+    println(
+        crosses
+            .map { l_cross ->
+                Pair(locationsA.indexOfFirst { it.equals(l_cross) } + 1,
+                    locationsB.indexOfFirst { it.equals(l_cross) } + 1)
+            }
+            .map { it.first + it.second }
+            .minOrNull() ?: throw IllegalStateException("shouldn't be null")
     )
 
 }

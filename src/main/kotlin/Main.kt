@@ -11,7 +11,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.Period
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
@@ -70,7 +69,7 @@ val fibM: (Int) -> Long by Memoize { n: Int ->
     }
 }
 
-fun main(args: Array<String>) {
+fun main() {
 
     println(fibM(100))
 //    lateinit var fib: (Int) -> Long

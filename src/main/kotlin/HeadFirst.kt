@@ -73,7 +73,7 @@ class Contest<T : Pet>(val vet: Vet<in T>) {
         if (score >= 0) scores.put(contestant, score)
     }
     fun getWinners(): Map<T, Int> {
-        val highscore = scores.values.max()
+        val highscore = scores.values.maxOrNull() ?: throw IllegalStateException("shouldn't be null")
         return scores.filter { it.value == highscore }
     }
 
