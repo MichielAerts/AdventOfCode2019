@@ -68,6 +68,8 @@ fun List<List<Char>>.countAllOccurrences(c: Char): Int = joinToString("") { it.j
 
 fun List<Char>.countOccurrences(c: Char): Int = joinToString("").count { it == c }
 
+fun List<Char>.hasAllDifferentCharacters(): Boolean = this.size == this.toSet().size
+    
 fun <E> List<E>.findOrThrow(function: (E) -> Boolean): E =
     this.find(function) ?: throw IllegalStateException("not found")
 
