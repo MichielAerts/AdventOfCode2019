@@ -11,19 +11,49 @@ val file = File("src/main/resources/edition2022/day${day}/input")
 class Puzzle(private val input: List<String>) {
     fun runPart1() {
         println("Part 1 of Day $day")
-        println(input)
         val (stacksInput, movesInput) = input.splitBy { it.isEmpty() }
-        println(movesInput.map { Move.create(it) })
-        println(Stacks.create(stacksInput))
+        val moves = movesInput.map { Move.create(it) }
+        val stacks = Stacks.create(stacksInput)
+        moves.forEach { stacks.performMove(it) }
+        println(stacks.getTop())
     }
     
     fun runPart2() {
         println("Part 2 of Day $day")
-        println(input)      
+        val (stacksInput, movesInput) = input.splitBy { it.isEmpty() }
+        val moves = movesInput.map { Move.create(it) }
+        val stacks = Stacks.create(stacksInput)
+        moves.forEach { stacks.performMove9001(it) }
+        println(stacks.getTop())   
     }
 }
 // top of stack is first one in the deque 
 data class Stacks(val stacks: MutableMap<Int, ArrayDeque<Char>>) {
+    
+    fun performMove(move: Move) {
+        val target = stacks.getOrThrow(move.target)
+        val source = stacks.getOrThrow(move.source)
+        for (i in 1..move.quantity) {
+            target.addFirst(source.removeFirst())
+        }
+//        println(stacks)
+    }
+
+    fun performMove9001(move: Move) {
+        val target = stacks.getOrThrow(move.target)
+        val source = stacks.getOrThrow(move.source)
+        val craneStack = ArrayDeque<Char>()
+        for (i in 1..move.quantity) {
+            craneStack.addFirst(source.removeFirst())
+        }
+        for (i in 1..move.quantity) {
+            target.addFirst(craneStack.removeFirst())
+        }
+//        println(stacks)
+    }
+    
+    fun getTop(): String = (1..stacks.size).map { stacks.getOrThrow(it).first() }.joinToString("")
+
     companion object {
         fun create(input: List<String>): Stacks {
             val stacks = mutableMapOf<Int, ArrayDeque<Char>>()
