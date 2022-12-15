@@ -19,6 +19,19 @@ inline fun <reified T : Enum<T>> Regex.findGroupAsEnum(str: String, group: Strin
 // List & Map Utils
 fun <E> List<E>.subListTillEnd(fromIndex: Int): List<E> = this.subList(fromIndex, this.size)
 
+fun List<Int>.product(): Int = this.reduce { acc, i -> acc * i }
+
+inline fun <T> Iterable<T>.takeWhileInclusive(
+    predicate: (T) -> Boolean
+): List<T> {
+    var shouldContinue = true
+    return takeWhile {
+        val result = shouldContinue
+        shouldContinue = predicate(it)
+        result
+    }
+}
+
 fun <E> List<E>?.subList(fromIndex: Int): List<E>? = this?.subList(fromIndex, this.size)
 
 fun <T> List<T>.toPair(): Pair<T, T> {
@@ -87,6 +100,11 @@ fun <T> T.log(): T { println(this); return this }
 //
 
 // Points & Neighbours
+
+fun List<String>.to2DGridOfPoints(): List<List<Point>> = this.mapIndexed { y, r ->
+    r.toList().mapIndexed { x, v -> Point(x, y, v.digitToInt()) }
+}
+
 open class Point(val x: Int, val y: Int, var z: Int = 0, var value: Char = '.') {
     constructor(x: String, y: String) : this(x.toInt(), y.toInt())
     constructor(x: String, y: String, z: String) : this(x.toInt(), y.toInt(), z.toInt())
@@ -109,7 +127,7 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var value: Char = '.') 
 
     operator fun minus(d: Distance) = Point(x - d.dx, y - d.dy, z - d.dz)
 
-    override fun toString(): String = "Point(x: $x, y: $y, c: $value)"
+    override fun toString(): String = "Point(x: $x, y: $y, z: $z, c: $value)"
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -135,6 +153,12 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var value: Char = '.') 
     operator fun component1(): Int = x
     operator fun component2(): Int = y
     operator fun component3(): Int = z
+    fun getViews(grid: List<List<Point>>): List<List<Point>> = listOf(
+        grid.getColumn(x).subList(0, y).reversed(), //up    
+        grid.getColumn(x).subListTillEnd(y + 1), //down
+        grid.getRow(y).subList(0, x).reversed(), //left    
+        grid.getRow(y).subListTillEnd(x + 1) //right
+    )
 }
 
 data class Distance(val dx: Int, val dy: Int, val dz: Int) {
@@ -184,5 +208,11 @@ fun List<List<Point>>.getPoint(x: Int, y: Int): Point? {
     if (x < 0 || x > (this[0].size - 1) || y < 0 || y > (this.size - 1)) return null
     return this[y][x]
 }
+
+fun List<List<Point>>.getRow(y: Int): List<Point> = this[y]
+
+fun List<List<Point>>.getColumn(x: Int): List<Point> = this.map { it[x] }
+
+fun List<List<Point>>.print() = this.forEach { println(it.map { it.z }.joinToString("")) }
 
 data class PointAndNeighbours(val point: Point, val neighbours: List<Point>)
