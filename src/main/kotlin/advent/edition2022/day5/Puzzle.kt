@@ -79,6 +79,7 @@ data class Stacks(val stacks: MutableMap<Int, ArrayDeque<Char>>) {
 }
 
 data class Move(val quantity: Int, val source: Int, val target: Int) {
+    
     companion object {
         private val moveRegex = """move (\d+) from (\d+) to (\d+)""".toRegex()
         fun create(input: String): Move {
