@@ -105,6 +105,19 @@ fun List<String>.to2DGridOfPoints(): List<List<Point>> = this.mapIndexed { y, r 
     r.toList().mapIndexed { x, v -> Point(x, y, v.digitToInt()) }
 }
 
+enum class Direction { UP, DOWN, RIGHT, LEFT;
+    companion object {
+        fun getDirectionFromFirstLetter(input: String): Direction {
+            return when (input) {
+                "U" -> UP
+                "D" -> DOWN
+                "R" -> RIGHT
+                "L" -> LEFT
+                else -> throw IllegalArgumentException("No")
+            }
+        }
+    }
+}
 open class Point(val x: Int, val y: Int, var z: Int = 0, var value: Char = '.') {
     constructor(x: String, y: String) : this(x.toInt(), y.toInt())
     constructor(x: String, y: String, z: String) : this(x.toInt(), y.toInt(), z.toInt())
@@ -168,9 +181,28 @@ data class Distance(val dx: Int, val dy: Int, val dz: Int) {
         (dx - other.dx).absoluteValue + (dy - other.dy).absoluteValue + (dz - other.dz).absoluteValue
 }
 
-data class Pos(val x: Int, val y: Int)
+data class Pos(val x: Int, val y: Int) {
+    fun isTouching(other: Pos): Boolean = other in setOf(
+        Pos(x - 1, y - 1),
+        Pos(x, y - 1),
+        Pos(x + 1, y - 1),
+        Pos(x - 1, y),
+        Pos(x, y),
+        Pos(x + 1, y),
+        Pos(x - 1, y + 1),
+        Pos(x, y + 1),
+        Pos(x + 1, y + 1)
+    )
+}
 
-fun List<List<Point>>.getDirectNeighbours(p: Point): PointAndNeighbours {
+fun Pos.move(d: Direction): Pos = when (d) {
+    Direction.UP -> Pos(this.x, this.y + 1)
+    Direction.DOWN -> Pos(this.x, this.y - 1)
+    Direction.RIGHT -> Pos(this.x + 1, this.y)
+    Direction.LEFT -> Pos(this.x - 1, this.y)
+}
+
+fun List<List<Point>>.getDirectNeighbours(p: Point) : PointAndNeighbours {
     val potentialNeighbours = listOf(Pos(p.x - 1, p.y), Pos(p.x + 1, p.y), Pos(p.x, p.y - 1), Pos(p.x, p.y + 1))
     return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
 }
