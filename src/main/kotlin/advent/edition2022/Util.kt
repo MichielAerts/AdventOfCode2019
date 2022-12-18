@@ -14,12 +14,17 @@ fun Regex.findGroupAsString(str: String, group: String): String =
 
 inline fun <reified T : Enum<T>> Regex.findGroupAsEnum(str: String, group: String): T =
     enumValueOf(find(str)?.groups?.get(group)?.value?.toUpperCase() ?: throw IllegalArgumentException("couldn't"))
+
+operator fun Regex.contains(text: CharSequence): Boolean = this.matches(text)
+
 //
 
 // List & Map Utils
 fun <E> List<E>.subListTillEnd(fromIndex: Int): List<E> = this.subList(fromIndex, this.size)
 
 fun List<Int>.product(): Int = this.reduce { acc, i -> acc * i }
+
+fun List<Long>.product(): Long = this.reduce { acc, i -> acc * i }
 
 inline fun <T> Iterable<T>.takeWhileInclusive(
     predicate: (T) -> Boolean
