@@ -110,6 +110,14 @@ fun List<String>.to2DGridOfPoints(): List<List<Point>> = this.mapIndexed { y, r 
     r.toList().mapIndexed { x, v -> Point(x, y, v.digitToInt()) }
 }
 
+fun List<String>.to2DGridOfPointsWithLetters(): List<List<Point>> = this.mapIndexed { y, r ->
+    r.toList().mapIndexed { x, v -> Point(x, y, value = v) }
+}
+
+fun List<List<Point>>.findSingleValueInGrid(v: Char): Point = this.flatten().find { it.value == v }!!
+
+fun List<List<Point>>.findAllValuesInGrid(v: Char): List<Point> = this.flatten().filter { it.value == v }
+
 enum class Direction { UP, DOWN, RIGHT, LEFT;
     companion object {
         fun getDirectionFromFirstLetter(input: String): Direction {
