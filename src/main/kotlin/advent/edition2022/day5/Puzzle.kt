@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalStdlibApi::class)
+
 package test.advent.edition2022.day5
 
 import test.advent.edition2022.getOrThrow
