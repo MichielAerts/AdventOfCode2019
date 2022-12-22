@@ -89,7 +89,7 @@ fun List<List<Char>>.countAllOccurrences(c: Char): Int = joinToString("") { it.j
 fun List<Char>.countOccurrences(c: Char): Int = joinToString("").count { it == c }
 
 fun List<Char>.hasAllDifferentCharacters(): Boolean = this.size == this.toSet().size
-    
+
 fun <E> List<E>.findOrThrow(function: (E) -> Boolean): E =
     this.find(function) ?: throw IllegalStateException("not found")
 
@@ -103,7 +103,9 @@ fun <K, V> Map<K, V>.getAllInListOrThrow(vararg keys: K): List<V> {
     return newList
 }
 
-fun <T> T.log(): T { println(this); return this }
+fun <T> T.log(): T {
+    println(this); return this
+}
 //
 
 // Points & Neighbours
@@ -116,11 +118,26 @@ fun List<String>.to2DGridOfPointsWithLetters(): List<List<Point>> = this.mapInde
     r.toList().mapIndexed { x, v -> Point(x, y, value = v) }
 }
 
+fun initEmptyGrid(startX: Int = 0, endX: Int, startY: Int = 0, endY: Int): List<List<Point>> =
+    (startY..endY).map { y -> (startX..endX).map { Point(it, y) } }
+
 fun List<List<Point>>.findSingleValueInGrid(v: Char): Point = this.flatten().find { it.value == v }!!
 
 fun List<List<Point>>.findAllValuesInGrid(v: Char): List<Point> = this.flatten().filter { it.value == v }
 
-enum class Direction { UP, DOWN, RIGHT, LEFT;
+fun List<List<Point>>.changePoint(pointToBeChanged: Point, c: Char) {
+    this.getPoint(pointToBeChanged.x, pointToBeChanged.y)?.value = c
+} 
+
+fun List<List<Point>>.changePoints(points: Set<Point>, c: Char) {
+    for (pointToBeChanged in points) {
+        this.changePoint(pointToBeChanged, c)
+    }
+}
+
+enum class Direction {
+    UP, DOWN, RIGHT, LEFT;
+
     companion object {
         fun getDirectionFromFirstLetter(input: String): Direction {
             return when (input) {
@@ -133,6 +150,7 @@ enum class Direction { UP, DOWN, RIGHT, LEFT;
         }
     }
 }
+
 open class Point(val x: Int, val y: Int, var z: Int = 0, var value: Char = '.') {
     constructor(x: String, y: String) : this(x.toInt(), y.toInt())
     constructor(x: String, y: String, z: String) : this(x.toInt(), y.toInt(), z.toInt())
@@ -187,6 +205,14 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var value: Char = '.') 
         grid.getRow(y).subList(0, x).reversed(), //left    
         grid.getRow(y).subListTillEnd(x + 1) //right
     )
+
+    fun getPointsInLineTo(end: Point): List<Point> = when {
+        this.x == end.x && this.y < end.y -> (this.y..end.y).map { Point(this.x, it) }
+        this.x == end.x && this.y > end.y -> (end.y..this.y).map { Point(this.x, it) }
+        this.y == end.y && this.x < end.x -> (this.x..end.x).map { Point(it, this.y) }
+        this.y == end.y && this.x > end.x -> (end.x..this.x).map { Point(it, this.y) }
+        else -> throw IllegalArgumentException("shouldn't")
+    }
 }
 
 data class Distance(val dx: Int, val dy: Int, val dz: Int) {
@@ -217,24 +243,24 @@ fun Pos.move(d: Direction): Pos = when (d) {
     Direction.LEFT -> Pos(this.x - 1, this.y)
 }
 
-fun List<List<Point>>.getDirectNeighbours(p: Point) : PointAndNeighbours {
+fun List<List<Point>>.getDirectNeighbours(p: Point): PointAndNeighbours {
     val potentialNeighbours = listOf(Pos(p.x - 1, p.y), Pos(p.x + 1, p.y), Pos(p.x, p.y - 1), Pos(p.x, p.y + 1))
     return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
 }
-
-fun List<List<Point>>.getAllNeighbours(p: Point): PointAndNeighbours {
-    val potentialNeighbours = listOf(
-        Pos(p.x - 1, p.y - 1),
-        Pos(p.x, p.y - 1),
-        Pos(p.x + 1, p.y - 1),
-        Pos(p.x - 1, p.y),
-        Pos(p.x + 1, p.y),
-        Pos(p.x - 1, p.y + 1),
-        Pos(p.x, p.y + 1),
-        Pos(p.x + 1, p.y + 1)
-    )
-    return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
-}
+//
+//fun List<List<Point>>.getAllNeighbours(p: Point): PointAndNeighbours {
+//    val potentialNeighbours = listOf(
+//        Pos(p.x - 1, p.y - 1),
+//        Pos(p.x, p.y - 1),
+//        Pos(p.x + 1, p.y - 1),
+//        Pos(p.x - 1, p.y),
+//        Pos(p.x + 1, p.y),
+//        Pos(p.x - 1, p.y + 1),
+//        Pos(p.x, p.y + 1),
+//        Pos(p.x + 1, p.y + 1)
+//    )
+//    return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
+//}
 
 fun List<List<Char>>.getThreeByThreeSquare(x: Int, y: Int): List<Char> {
     val points = listOf(
@@ -260,6 +286,8 @@ fun List<List<Point>>.getRow(y: Int): List<Point> = this[y]
 
 fun List<List<Point>>.getColumn(x: Int): List<Point> = this.map { it[x] }
 
-fun List<List<Point>>.print() = this.forEach { println(it.map { it.z }.joinToString("")) }
+fun List<List<Point>>.printZ() = this.forEach { println(it.map { it.z }.joinToString("")) }
+
+fun List<List<Point>>.printV() = this.forEach { println(it.map { it.value }.joinToString("")) }
 
 data class PointAndNeighbours(val point: Point, val neighbours: List<Point>)
