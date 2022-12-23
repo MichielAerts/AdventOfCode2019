@@ -223,6 +223,8 @@ data class Distance(val dx: Int, val dy: Int, val dz: Int) {
 }
 
 data class Pos(val x: Int, val y: Int) {
+    constructor(x: String, y: String) : this(x.toInt(), y.toInt())
+
     fun isTouching(other: Pos): Boolean = other in setOf(
         Pos(x - 1, y - 1),
         Pos(x, y - 1),
@@ -234,6 +236,8 @@ data class Pos(val x: Int, val y: Int) {
         Pos(x, y + 1),
         Pos(x + 1, y + 1)
     )
+
+    fun getManhattanDistance(other: Pos): Int = (this.x - other.x).absoluteValue + (this.y - other.y).absoluteValue
 }
 
 fun Pos.move(d: Direction): Pos = when (d) {
