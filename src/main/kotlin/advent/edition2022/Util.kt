@@ -286,6 +286,8 @@ fun List<List<Point>>.getPoint(x: Int, y: Int): Point? {
     return this[y][x]
 }
 
+fun List<List<Point>>.getHighestRowContaining(c: Char): Int = this.indexOfLast { it.any { it.value == c } }
+
 fun List<List<Point>>.getRow(y: Int): List<Point> = this[y]
 
 fun List<List<Point>>.getColumn(x: Int): List<Point> = this.map { it[x] }
