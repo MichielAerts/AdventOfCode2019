@@ -121,6 +121,9 @@ fun List<String>.to2DGridOfPointsWithLetters(): List<List<Point>> = this.mapInde
 fun initEmptyGrid(startX: Int = 0, endX: Int, startY: Int = 0, endY: Int): List<List<Point>> =
     (startY..endY).map { y -> (startX..endX).map { Point(it, y) } }
 
+fun initEmpty3DGrid(startX: Int = 0, endX: Int, startY: Int = 0, endY: Int, startZ: Int = 0, endZ: Int): List<List<List<Point>>> =
+    (startZ..endZ).map { z -> (startY..endY).map { y -> (startX..endX).map { x -> Point(x, y, z) } } }
+
 fun List<List<Point>>.findSingleValueInGrid(v: Char): Point = this.flatten().find { it.value == v }!!
 
 fun List<List<Point>>.findAllValuesInGrid(v: Char): List<Point> = this.flatten().filter { it.value == v }
@@ -213,6 +216,30 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var value: Char = '.') 
         this.y == end.y && this.x > end.x -> (end.x..this.x).map { Point(it, this.y) }
         else -> throw IllegalArgumentException("shouldn't")
     }
+
+    fun unconnectedSides(cubes: List<Point>): Int {
+        val potentialNeighbours = listOf(
+            Point(this.x - 1, this.y, this.z),
+            Point(this.x + 1, this.y, this.z),
+            Point(this.x, this.y - 1, this.z),
+            Point(this.x, this.y + 1, this.z),
+            Point(this.x, this.y, this.z - 1),
+            Point(this.x, this.y, this.z + 1),
+        )                    
+        return 6 - potentialNeighbours.count { cubes.contains(it) }
+    }
+
+    fun connectedTo(grid: List<List<List<Point>>>, c: Char): Int {
+        val potentialNeighbours = listOf(
+            Point(this.x - 1, this.y, this.z),
+            Point(this.x + 1, this.y, this.z),
+            Point(this.x, this.y - 1, this.z),
+            Point(this.x, this.y + 1, this.z),
+            Point(this.x, this.y, this.z - 1),
+            Point(this.x, this.y, this.z + 1),
+        )
+        return potentialNeighbours.mapNotNull { grid.getPoint(it.x, it.y, it.z) }.count { it.value == c }
+    }
 }
 
 data class Distance(val dx: Int, val dy: Int, val dz: Int) {
@@ -251,6 +278,15 @@ fun List<List<Point>>.getDirectNeighbours(p: Point): PointAndNeighbours {
     val potentialNeighbours = listOf(Pos(p.x - 1, p.y), Pos(p.x + 1, p.y), Pos(p.x, p.y - 1), Pos(p.x, p.y + 1))
     return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
 }
+
+fun List<List<List<Point>>>.getDirectNeighbours3D(p: Point): PointAndNeighbours {
+    val potentialNeighbours = 
+        listOf(
+            Point(p.x - 1, p.y, p.z), Point(p.x + 1, p.y, p.z), 
+            Point(p.x, p.y - 1, p.z), Point(p.x, p.y + 1, p.z), 
+            Point(p.x, p.y, p.z - 1), Point(p.x, p.y, p.z + 1))
+    return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y, it.z) })
+}
 //
 //fun List<List<Point>>.getAllNeighbours(p: Point): PointAndNeighbours {
 //    val potentialNeighbours = listOf(
@@ -286,6 +322,11 @@ fun List<List<Point>>.getPoint(x: Int, y: Int): Point? {
     return this[y][x]
 }
 
+fun List<List<List<Point>>>.getPoint(x: Int, y: Int, z: Int): Point? {
+    if (x < 0 || x > (this[0][0].size - 1) || y < 0 || y > (this[0].size - 1) || z < 0 || z > (this.size - 1)) return null
+    return this[z][y][x]
+}
+
 fun List<List<Point>>.getHighestRowContaining(c: Char): Int = this.indexOfLast { it.any { it.value == c } }
 
 fun List<List<Point>>.getRow(y: Int): List<Point> = this[y]
@@ -295,5 +336,12 @@ fun List<List<Point>>.getColumn(x: Int): List<Point> = this.map { it[x] }
 fun List<List<Point>>.printZ() = this.forEach { println(it.map { it.z }.joinToString("")) }
 
 fun List<List<Point>>.printV() = this.forEach { println(it.map { it.value }.joinToString("")) }
+
+fun List<List<List<Point>>>.printV3D() = this.forEach { 
+    it.forEach {
+        println(it.map { it.value }.joinToString(""))
+    }
+    println()
+}
 
 data class PointAndNeighbours(val point: Point, val neighbours: List<Point>)
