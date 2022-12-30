@@ -103,6 +103,11 @@ fun <K, V> Map<K, V>.getAllInListOrThrow(vararg keys: K): List<V> {
     return newList
 }
 
+fun <K, V, R> Pair<Map<K, V>, Map<K, V>>.merge(merger: (V?, V?) -> R): Map<K, R> {
+    return (first.keys.asSequence() + second.keys.asSequence())
+        .associateWith { merger(first[it], second[it]) }
+}
+
 fun <T> T.log(): T {
     println(this); return this
 }
