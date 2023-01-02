@@ -146,6 +146,27 @@ fun List<List<Point>>.changePoints(points: Set<Point>, c: Char) {
 enum class Direction {
     UP, DOWN, RIGHT, LEFT;
 
+    fun turnRight(): Direction = when(this) {
+        UP -> RIGHT
+        DOWN -> LEFT
+        RIGHT -> DOWN
+        LEFT -> UP
+    }
+    
+    fun opposite(): Direction = when(this) {
+        UP -> DOWN
+        DOWN -> UP
+        RIGHT -> LEFT
+        LEFT -> RIGHT
+    }
+
+    fun turnLeft(): Direction = when(this) {
+        UP -> LEFT
+        DOWN -> RIGHT
+        RIGHT -> UP
+        LEFT -> DOWN
+    }
+    
     companion object {
         fun getDirectionFromFirstLetter(input: String): Direction {
             return when (input) {
@@ -214,6 +235,13 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var value: Char = '.') 
         grid.getRow(y).subListTillEnd(x + 1) //right
     )
 
+    fun getView(direction: Direction, grid: List<List<Point>>): List<Point> = when(direction) {
+        Direction.UP -> grid.getColumn(x).subList(0, y).reversed()
+        Direction.DOWN -> grid.getColumn(x).subListTillEnd(y + 1)
+        Direction.RIGHT -> grid.getRow(y).subListTillEnd(x + 1)
+        Direction.LEFT -> grid.getRow(y).subList(0, x).reversed()
+    }
+
     fun getPointsInLineTo(end: Point): List<Point> = when {
         this.x == end.x && this.y < end.y -> (this.y..end.y).map { Point(this.x, it) }
         this.x == end.x && this.y > end.y -> (end.y..this.y).map { Point(this.x, it) }
@@ -279,6 +307,13 @@ fun Pos.move(d: Direction): Pos = when (d) {
     Direction.LEFT -> Pos(this.x - 1, this.y)
 }
 
+fun Pos.getNextPos(d: Direction): Pos = when (d) {
+    Direction.UP -> Pos(this.x, this.y - 1)
+    Direction.DOWN -> Pos(this.x, this.y + 1)
+    Direction.RIGHT -> Pos(this.x + 1, this.y)
+    Direction.LEFT -> Pos(this.x - 1, this.y)
+}
+
 fun List<List<Point>>.getDirectNeighbours(p: Point): PointAndNeighbours {
     val potentialNeighbours = listOf(Pos(p.x - 1, p.y), Pos(p.x + 1, p.y), Pos(p.x, p.y - 1), Pos(p.x, p.y + 1))
     return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
@@ -326,6 +361,8 @@ fun List<List<Point>>.getPoint(x: Int, y: Int): Point? {
     if (x < 0 || x > (this[0].size - 1) || y < 0 || y > (this.size - 1)) return null
     return this[y][x]
 }
+
+fun List<List<Point>>.getPoint(pos: Pos): Point? = getPoint(pos.x, pos.y)
 
 fun List<List<List<Point>>>.getPoint(x: Int, y: Int, z: Int): Point? {
     if (x < 0 || x > (this[0][0].size - 1) || y < 0 || y > (this[0].size - 1) || z < 0 || z > (this.size - 1)) return null
