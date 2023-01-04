@@ -2,6 +2,7 @@
 
 package test.advent.edition2022
 
+import test.advent.edition2022.WindDirection.*
 import kotlin.math.absoluteValue
 
 // Regex
@@ -142,6 +143,24 @@ fun List<List<Point>>.changePoints(points: Set<Point>, c: Char) {
         this.changePoint(pointToBeChanged, c)
     }
 }
+
+enum class WindDirection { 
+    N, NE, E, SE, S, SW, W, NW; 
+    companion object {
+        fun northwards() = setOf(N, NE, NW)
+        fun southwards() = setOf(S, SE, SW)
+        fun eastwards() = setOf(E, NE, SE)
+        fun westwards() = setOf(W, NW, SW)
+        fun getXwards(d: WindDirection) = when(d) {
+            N -> northwards()
+            S -> southwards()
+            W -> westwards()
+            E -> eastwards()
+            else -> throw IllegalArgumentException()
+        }
+    }
+}
+
 
 enum class Direction {
     UP, DOWN, RIGHT, LEFT;
@@ -342,20 +361,31 @@ fun List<List<List<Point>>>.getDirectNeighbours3D(p: Point): PointAndNeighbours 
 //    return PointAndNeighbours(p, potentialNeighbours.mapNotNull { this.getPoint(it.x, it.y) })
 //}
 
-fun List<List<Char>>.getThreeByThreeSquare(x: Int, y: Int): List<Char> {
-    val points = listOf(
-        Pos(x - 1, y - 1),
-        Pos(x, y - 1),
-        Pos(x + 1, y - 1),
-        Pos(x - 1, y),
-        Pos(x, y),
-        Pos(x + 1, y),
-        Pos(x - 1, y + 1),
-        Pos(x, y + 1),
-        Pos(x + 1, y + 1)
-    )
-    return points.map { this[it.y][it.x] }
+fun List<List<Point>>.getPoint(p: Point, direction: WindDirection) = 
+    this.getPoint(getSurroundingPositions(p).getOrThrow(direction))
+
+fun List<List<Point>>.getSurroundingPoints(p: Point): Map<WindDirection, Point> {
+    val points = getSurroundingPositions(p)
+    return points.map { it.key to this.getPoint(it.value)!! }.toMap()
 }
+
+private fun getSurroundingPositions(p: Point): Map<WindDirection, Pos> {
+    val x = p.x
+    val y = p.y
+    return mapOf(
+        N to Pos(x, y - 1),
+        NE to Pos(x + 1, y - 1),
+        E to Pos(x + 1, y),
+        SE to Pos(x + 1, y + 1),
+        S to Pos(x, y + 1),
+        SW to Pos(x - 1, y + 1),
+        W to Pos(x - 1, y),
+        NW to Pos(x - 1, y - 1)
+    )
+}
+
+fun List<List<Point>>.getSquare(minX: Int, maxX: Int, minY: Int, maxY: Int): List<List<Point>> = 
+    this.filter { it[0].y in minY..maxY }.map { it.filter { it.x in minX..maxX } }
 
 fun List<List<Point>>.getPoint(x: Int, y: Int): Point? {
     if (x < 0 || x > (this[0].size - 1) || y < 0 || y > (this.size - 1)) return null
