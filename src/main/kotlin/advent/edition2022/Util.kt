@@ -144,6 +144,8 @@ fun List<List<Point>>.changePoints(points: Set<Point>, c: Char) {
     }
 }
 
+fun List<List<Point>>.copy(): List<List<Point>> = this.map { it.map { it.copy() }.toList() }.toList()
+
 enum class WindDirection { 
     N, NE, E, SE, S, SW, W, NW; 
     companion object {
@@ -292,6 +294,10 @@ open class Point(val x: Int, val y: Int, var z: Int = 0, var value: Char = '.') 
         )
         return potentialNeighbours.mapNotNull { grid.getPoint(it.x, it.y, it.z) }.count { it.value == c }
     }
+    
+    fun getManhattanDistance(other: Point) = (this.x - other.x).absoluteValue + (this.y - other.y).absoluteValue
+
+    open fun copy() = Point(x, y, z, value)
 }
 
 data class Distance(val dx: Int, val dy: Int, val dz: Int) {
